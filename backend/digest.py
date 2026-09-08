@@ -29,7 +29,7 @@ def value_holdings(spot: dict, earn_usdc: float, prices: dict) -> dict:
 
 async def split_holdings(balances: dict) -> tuple:
     """Return (spot dict, earn_usdc float, earn detail dict) from a get_balances() payload."""
-    if balances.get("mode") == "live-exchange":
+    if balances.get("mode") in {"live-exchange", "agent-os-readonly"}:
         spot = dict(balances.get("exchange", {}).get("balances", {}))
         earn = await mcp_client.earn_positions("USDC")
         return spot, float(earn.get("principal", 0)), earn

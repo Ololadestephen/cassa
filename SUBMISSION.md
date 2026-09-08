@@ -48,17 +48,19 @@ the account at all.
 ## Agent OS evidence
 
 - Binance MCP OAuth completed successfully on 2026-09-08.
-- An authenticated Agentic asset-overview read succeeded.
-- The connected Agentic sub-account was empty; no trade or transfer was used to
-  manufacture the proof.
+- An authenticated Agentic Spot balance read succeeded after the account was funded.
+- The live account showed 6 USDT plus small TWT, USTC, TIA, and 1000CAT
+  balances; no trade or transfer was used to manufacture the proof.
+- Read-only route checks showed all five assets have a Convert path to USDC;
+  TWT and TIA cleared the observed ordinary minimums while USTC and 1000CAT did not.
 - Bounded discovery exposed account reads and futures Convert schemas.
 - MCP dust, Spot Convert, internal-transfer, and Earn action schemas remain
   explicitly unverified. See `CAPABILITIES.md`.
 
 ## Demo outline
 
-1. Show the authenticated Binance MCP account overview and the empty Agentic
-   account. State that this is live read evidence, not conversion evidence.
+1. Show the authenticated Binance MCP account overview and funded Agentic Spot
+   balances. State that this is live read evidence, not conversion evidence.
 2. Switch to the clearly labelled paper fixture for a reproducible workflow.
 3. Show 18 USDC free, a 25 USDC expense, and a 5 USDC reserve: the funding
    shortfall is 12 USDC.
@@ -105,7 +107,8 @@ How Agent OS is used:
 
 > Cassa connects to the Binance Agent OS MCP server using browser OAuth and a
 > dedicated Agentic sub-account. The agent dynamically discovers market and
-> account tools, keeps main-account visibility read-only, and subjects any
+> account tools, reads the funded Spot balances without API keys, keeps
+> main-account visibility read-only, and subjects any
 > future provider write to both Cassa's exact plan approval and Binance's own
 > confirmation. The submitted evidence includes a successful authenticated
 > Agentic account overview; unsupported action capabilities remain gated.

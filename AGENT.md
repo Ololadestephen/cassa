@@ -12,15 +12,18 @@ Cassa remains the source of truth for application policy and plan state.
 ## Required host setup
 
 1. Trust this project so Codex loads `.codex/config.toml`.
-2. Run `codex mcp login binance-agent-os` and complete Binance authorization.
+2. For Codex-hosted verification, run `codex mcp login binance-agent-os`. For
+   the product UI, set `CASSA_PROVIDER=agent-os-readonly`, ensure the configured
+   HTTPS client metadata document is public, and use **Connect Binance**.
 3. Start with Market data and Account scopes. Add Trade only for a specifically
    approved integration test. Transfer is not needed for cash-readiness
    planning.
 4. Run the FastAPI and Next.js applications using `README.md`.
 
-OAuth credentials, Binance keys, callback URLs, and account identifiers must
-never be copied into this repository, chat output, activity logs, or demo
-artifacts.
+OAuth credentials, Binance keys, authorization URLs, and account identifiers
+must never be copied into this repository, chat output, activity logs, or demo
+artifacts. Callback and client-metadata URLs may be documented because they
+contain no credential.
 
 ## Capability discovery
 

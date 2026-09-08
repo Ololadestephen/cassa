@@ -18,7 +18,8 @@ import urllib.parse
 
 import httpx
 
-from .store import get_earn_ledger, get_paper, is_mock, save
+from .providers.agent_os import AgentOSAuthorizationRequired, connection as agent_os_connection
+from .store import get_earn_ledger, get_paper, is_agent_os_readonly, is_binance_rest, is_mock, provider_mode, save
 
 PUBLIC_BASES = [
     "https://data-api.binance.vision",
@@ -63,6 +64,8 @@ async def _public_get(path: str, params: dict | None = None) -> tuple:
 
 
 async def _signed_get(path: str, params: dict | None = None) -> dict:
+    if not is_binance_rest():
+        raise RuntimeError("Signed Binance REST access is disabled for the selected Cassa provider")
     if not keys_configured():
         raise RuntimeError("BINANCE_API_KEY and BINANCE_API_SECRET are required for live exchange reads")
     async with httpx.AsyncClient(timeout=15) as client:
@@ -76,6 +79,8 @@ async def _signed_get(path: str, params: dict | None = None) -> dict:
 
 
 async def _signed_post(path: str, params: dict | None = None) -> dict:
+    if not is_binance_rest():
+        raise RuntimeError("Signed Binance REST access is disabled for the selected Cassa provider")
     if not keys_configured():
         raise RuntimeError("BINANCE_API_KEY and BINANCE_API_SECRET are required for live exchange writes")
     async with httpx.AsyncClient(timeout=15) as client:
@@ -107,9 +112,33 @@ async def get_prices(symbols: tuple = ("BTCUSDC", "ETHUSDC", "SOLUSDC", "BNBUSDC
         for symbol in symbols:
             try:
                 tick, base = await _public_get("/api/v3/ticker/price", {"symbol": symbol})
-                out[symbol] = {"price": float(tick["price"])}
+                out[symbol] = {"price": tick["price"]}
                 out["base"] = base
             except Exception as exc:
+                # Many smaller assets trade against USDT but not directly against
+                # USDC. Value those through the bounded USDT/USDC bridge rather
+                # than silently treating them as zero.
+                if symbol.endswith("USDC") and symbol != "USDTUSDC":
+                    from decimal import Decimal, InvalidOperation
+
+                    asset = symbol[:-4]
+                    try:
+                        asset_tick, base = await _public_get("/api/v3/ticker/24hr", {"symbol": f"{asset}USDT"})
+                        stable_tick, _ = await _public_get("/api/v3/ticker/price", {"symbol": "USDTUSDC"})
+                        usdt_usdc = Decimal(str(stable_tick["price"]))
+                        out[symbol] = {
+                            "price": str(Decimal(str(asset_tick["lastPrice"])) * usdt_usdc),
+                            "change_24h_pct": asset_tick.get("priceChangePercent"),
+                            "high_24h": str(Decimal(str(asset_tick["highPrice"])) * usdt_usdc),
+                            "low_24h": str(Decimal(str(asset_tick["lowPrice"])) * usdt_usdc),
+                            "volume_24h": asset_tick.get("volume"),
+                            "quote_volume_24h": str(Decimal(str(asset_tick["quoteVolume"])) * usdt_usdc),
+                            "route": f"{asset}/USDT × USDT/USDC",
+                        }
+                        out["base"] = base
+                        continue
+                    except (Exception, InvalidOperation):
+                        pass
                 out[symbol] = {"error": str(exc)}
     out["fetched_at"] = int(time.time())
     return out
@@ -180,6 +209,14 @@ async def get_dust_convertible_assets(
             "target_asset": target_asset,
             "fee_rate": str(fee_rate),
             "details": details,
+        }
+    if is_agent_os_readonly():
+        return {
+            "available": False,
+            "source": "binance-agent-os-mcp",
+            "target_asset": target_asset,
+            "reason": "dust_tool_unverified",
+            "details": [],
         }
     raw = await _signed_post(
         "/sapi/v1/asset/dust-convert/query-convertible-assets",
@@ -260,15 +297,18 @@ async def convert_dust_assets(assets: list[str], target_asset: str = "USDC", dry
 
 async def get_exchange_balances() -> dict:
     account = await _signed_get("/api/v3/account")
-    balances = {
-        row["asset"]: float(row["free"]) + float(row["locked"])
-        for row in account.get("balances", [])
-        if float(row["free"]) + float(row["locked"]) > 0
-    }
+    from decimal import Decimal
+
+    nonzero = [row for row in account.get("balances", []) if Decimal(row["free"]) + Decimal(row["locked"]) > 0]
+    free = {row["asset"]: row["free"] for row in nonzero}
+    locked = {row["asset"]: row["locked"] for row in nonzero}
+    balances = {row["asset"]: str(Decimal(row["free"]) + Decimal(row["locked"])) for row in nonzero}
     return {
         "source": "live-exchange",
         "testnet": TESTNET,
         "balances": balances,
+        "free": free,
+        "locked": locked,
         "can_trade": account.get("canTrade"),
         "account_type": account.get("accountType"),
     }
@@ -281,9 +321,48 @@ async def get_futures_positions() -> dict:
 
 
 async def get_balances() -> dict:
-    prices = await get_prices()
     if is_mock():
+        prices = await get_prices()
         return {"mode": "paper", "source": "paper", "paper": get_paper(), "prices": prices}
+    if is_agent_os_readonly():
+        try:
+            exchange = await agent_os_connection.spot_balances()
+            assets = tuple(f"{asset}USDC" for asset in exchange.get("balances", {}) if asset != "USDC")
+            prices = await get_prices(assets or ("BTCUSDC",))
+            return {
+                "mode": "agent-os-readonly",
+                "source": "binance-agent-os-mcp",
+                "account_scope": "agentic-sub-account",
+                "exchange": exchange,
+                "positions": {"source": "not-requested", "open": [], "count": 0},
+                "prices": prices,
+                "connection": await agent_os_connection.status(),
+            }
+        except AgentOSAuthorizationRequired as exc:
+            return {
+                "mode": "agent-os-readonly",
+                "source": "binance-agent-os-mcp",
+                "account_scope": "agentic-sub-account",
+                "exchange": {"balances": {}, "free": {}, "locked": {}},
+                "positions": {"source": "not-requested", "open": [], "count": 0},
+                "prices": {"source": "not-requested", "fetched_at": int(time.time())},
+                "connection": await agent_os_connection.status(),
+                "read_error": str(exc),
+            }
+        except Exception as exc:
+            return {
+                "mode": "agent-os-readonly",
+                "source": "binance-agent-os-mcp",
+                "account_scope": "agentic-sub-account",
+                "exchange": {"balances": {}, "free": {}, "locked": {}},
+                "positions": {"source": "not-requested", "open": [], "count": 0},
+                "prices": {"source": "not-requested", "fetched_at": int(time.time())},
+                "connection": await agent_os_connection.status(),
+                "read_error": f"Agent OS balance read failed: {exc}",
+            }
+    if provider_mode() != "binance-rest":
+        raise RuntimeError("CASSA_PROVIDER must be paper, agent-os-readonly, or binance-rest")
+    prices = await get_prices()
     balances = await get_exchange_balances()
     positions = await get_futures_positions()
     return {
@@ -300,8 +379,11 @@ async def get_spendable_balance(asset: str) -> float:
     asset = asset.upper()
     if is_mock():
         return float(get_paper().get("spot", {}).get(asset, 0))
+    if is_agent_os_readonly():
+        balances = await agent_os_connection.spot_balances()
+        return float(balances.get("free", {}).get(asset, 0))
     balances = await get_exchange_balances()
-    return float(balances.get("balances", {}).get(asset, 0))
+    return float(balances.get("free", {}).get(asset, 0))
 
 
 async def quote_convert_from_market(from_asset: str, to_asset: str, amount: float) -> dict:
@@ -364,7 +446,7 @@ async def place_spot_order(symbol: str, side: str, quote_usdc: float, dry_run: b
             "quote_usdc": quote_usdc,
             "est_price": price,
             "est_qty": round(qty, 6),
-            "would_execute_on": "paper" if is_mock() else "live-exchange",
+            "would_execute_on": "disabled-read-only" if is_agent_os_readonly() else "paper" if is_mock() else "live-exchange",
         }
     if is_mock():
         paper = get_paper()
@@ -390,6 +472,8 @@ async def place_spot_order(symbol: str, side: str, quote_usdc: float, dry_run: b
             "fill_qty": round(qty, 6),
             "quote_usdc": quote_usdc,
         }
+    if is_agent_os_readonly():
+        return {"source": "binance-agent-os-mcp", "ok": False, "error": "Agent OS is connected read-only; Spot writes are disabled."}
     fill = await _signed_post(
         "/api/v3/order", {"symbol": symbol, "side": side, "type": "MARKET", "quoteOrderQty": quote_usdc}
     )
@@ -409,7 +493,7 @@ async def internal_transfer(asset: str, amount: float, destination: str, dry_run
             "asset": asset,
             "amount": amount,
             "destination": destination,
-            "would_execute_on": "paper" if is_mock() else "live-exchange",
+            "would_execute_on": "disabled-read-only" if is_agent_os_readonly() else "paper" if is_mock() else "live-exchange",
         }
     if is_mock():
         paper = get_paper()
@@ -426,6 +510,8 @@ async def internal_transfer(asset: str, amount: float, destination: str, dry_run
             "amount": amount,
             "destination": destination,
         }
+    if is_agent_os_readonly():
+        return {"source": "binance-agent-os-mcp", "ok": False, "error": "Agent OS is connected read-only; transfers are disabled."}
     moved = await _signed_post(
         "/sapi/v1/sub-account/universalTransfer",
         {
@@ -489,6 +575,15 @@ async def earn_positions(asset: str = "USDC") -> dict:
             "apr_pct": float(row.get("apr_pct", 4.2)),
             "apr_note": "paper snapshot rate, compounds on every read",
         }
+    if is_agent_os_readonly():
+        return {
+            "source": "binance-agent-os-mcp",
+            "asset": asset,
+            "principal": 0,
+            "apr_pct": 0,
+            "available": False,
+            "reason": "Earn positions are not included in the verified Spot balance adapter",
+        }
     product_id, product = await _resolve_flexible_product_id(asset)
     raw = await _signed_get("/sapi/v1/lending/daily/token/position", {"asset": asset})
     rows = raw if isinstance(raw, list) else raw.get("rows", [])
@@ -516,7 +611,7 @@ async def earn_subscribe(asset: str, amount: float, dry_run: bool) -> dict:
             "asset": asset,
             "amount": amount,
             "product": "Simple Earn Flexible",
-            "would_execute_on": "paper" if is_mock() else "live-exchange",
+            "would_execute_on": "disabled-read-only" if is_agent_os_readonly() else "paper" if is_mock() else "live-exchange",
         }
     if is_mock():
         paper = get_paper()
@@ -532,6 +627,8 @@ async def earn_subscribe(asset: str, amount: float, dry_run: bool) -> dict:
         row["principal"] = round(float(row["principal"]) + amount, 6)
         save("paper", paper)
         return {"source": "paper", "ok": True, "asset": asset, "amount": amount, "principal": row["principal"]}
+    if is_agent_os_readonly():
+        return {"source": "binance-agent-os-mcp", "ok": False, "error": "Agent OS is connected read-only; Earn writes are disabled."}
     product_id, _ = await _resolve_flexible_product_id(asset)
     bought = await _signed_post("/sapi/v1/lending/daily/purchase", {"productId": product_id, "amount": amount})
     bought["source"] = "live-exchange"
@@ -553,7 +650,7 @@ async def earn_redeem(asset: str, amount: float, dry_run: bool) -> dict:
             "asset": asset,
             "amount": amount,
             "principal_available": positions.get("principal", 0),
-            "would_execute_on": "paper" if is_mock() else "live-exchange",
+            "would_execute_on": "disabled-read-only" if is_agent_os_readonly() else "paper" if is_mock() else "live-exchange",
         }
     if is_mock():
         paper = get_paper()
@@ -566,6 +663,8 @@ async def earn_redeem(asset: str, amount: float, dry_run: bool) -> dict:
         paper["spot"][asset] = round(float(paper["spot"].get(asset, 0)) + amount, 2)
         save("paper", paper)
         return {"source": "paper", "ok": True, "asset": asset, "amount": amount, "principal_left": row["principal"]}
+    if is_agent_os_readonly():
+        return {"source": "binance-agent-os-mcp", "ok": False, "error": "Agent OS is connected read-only; Earn writes are disabled."}
     product_id, _ = await _resolve_flexible_product_id(asset)
     freed = await _signed_post("/sapi/v1/lending/daily/redeem", {"productId": product_id, "amount": amount})
     freed["source"] = "live-exchange"

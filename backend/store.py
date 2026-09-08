@@ -1,7 +1,8 @@
 """Transactional local state for Cassa.
 
 Legacy JSON is imported lazily into SQLite on first access and left untouched as
-an audit-friendly backup. MOCK_MODE=true selects the paper ledger.
+an audit-friendly backup. CASSA_PROVIDER selects the provider boundary; the
+older MOCK_MODE flag remains a backwards-compatible paper/REST default.
 """
 import json
 import os
@@ -46,8 +47,30 @@ def save(name: str, obj) -> None:
         )
 
 
+def provider_mode() -> str:
+    explicit = os.getenv("CASSA_PROVIDER", "").strip().lower()
+    aliases = {
+        "paper": "paper",
+        "agent-os": "agent-os-readonly",
+        "agent-os-readonly": "agent-os-readonly",
+        "binance-rest": "binance-rest",
+        "live-exchange": "binance-rest",
+    }
+    if explicit:
+        return aliases.get(explicit, "invalid")
+    return "paper" if os.getenv("MOCK_MODE", "true").lower() == "true" else "binance-rest"
+
+
 def is_mock() -> bool:
-    return os.getenv("MOCK_MODE", "true").lower() == "true"
+    return provider_mode() == "paper"
+
+
+def is_agent_os_readonly() -> bool:
+    return provider_mode() == "agent-os-readonly"
+
+
+def is_binance_rest() -> bool:
+    return provider_mode() == "binance-rest"
 
 
 DEFAULT_CONFIG = {

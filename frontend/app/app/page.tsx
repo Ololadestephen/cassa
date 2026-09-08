@@ -21,6 +21,8 @@ export default function Desk() {
   const [book, setBook] = useState<Record<string, any>>({});
   const [obligations, setObligations] = useState<any[]>([]);
   const [capabilities, setCapabilities] = useState<any>(null);
+  const [provider, setProvider] = useState<any>(null);
+  const [providerError, setProviderError] = useState("");
   const [msgs, setMsgs] = useState<ChatMsg[]>([
     { role: "cassa", text: "Check what you can afford, protect holdings, prepare payment funds, and review every action before execution." },
   ]);
@@ -72,11 +74,11 @@ export default function Desk() {
 
   const refresh = useCallback(async () => {
     try {
-      const [h, mk, b, pf, dg, ac, cf, ob, cp, pl] = await Promise.all([
-        api.health(), api.market(), api.balance(), api.portfolio(), api.digest(), api.activity(), api.config(), api.obligations(), api.capabilities(), api.plans(),
+      const [h, mk, b, pf, dg, ac, cf, ob, cp, pl, pv] = await Promise.all([
+        api.health(), api.market(), api.balance(), api.portfolio(), api.digest(), api.activity(), api.config(), api.obligations(), api.capabilities(), api.plans(), api.agentOSStatus(),
       ]);
       setHealth(h); setMarkets(mk.markets); setBal(b); setPortfolio(pf);
-      setDigest(dg); setActivity(ac); setBook(cf.addressbook); setObligations(ob); setCapabilities(cp); setFundingPlans(pl);
+      setDigest(dg); setActivity(ac); setBook(cf.addressbook); setObligations(ob); setCapabilities(cp); setFundingPlans(pl); setProvider(pv);
       setOnline(true);
     } catch {
       setOnline(false);
@@ -88,6 +90,42 @@ export default function Desk() {
     const timer = setInterval(refresh, 15000);
     return () => clearInterval(timer);
   }, [refresh]);
+
+  useEffect(() => {
+    const receiveAuthorization = (event: MessageEvent) => {
+      if (event.data === "cassa-binance-connected") {
+        setProviderError("");
+        window.setTimeout(refresh, 800);
+      }
+    };
+    window.addEventListener("message", receiveAuthorization);
+    return () => window.removeEventListener("message", receiveAuthorization);
+  }, [refresh]);
+
+  useEffect(() => {
+    if (health?.provider_mode === "agent-os-readonly") setDryRun(true);
+  }, [health?.provider_mode]);
+
+  async function connectAgentOS() {
+    setProviderError("");
+    const popup = window.open("about:blank", "cassa-binance-auth", "popup,width=540,height=760");
+    try {
+      const result = await api.connectAgentOS();
+      setProvider(result);
+      if (result.authorization_url) {
+        if (popup) popup.location.href = result.authorization_url;
+        else window.location.href = result.authorization_url;
+      } else {
+        popup?.close();
+        await refresh();
+      }
+    } catch (error: any) {
+      popup?.close();
+      let reason = error.message;
+      try { reason = JSON.parse(error.message)?.detail ?? error.message; } catch {}
+      setProviderError(String(reason).slice(0, 300));
+    }
+  }
 
   async function send(text: string) {
     const clean = text.trim();
@@ -336,7 +374,8 @@ export default function Desk() {
 
   const total = portfolio?.total_priced_usdc ?? 0;
   const rows = portfolio?.holdings ?? [];
-  const balSpot = bal?.mode === "live-exchange" ? bal?.exchange?.balances ?? {} : bal?.paper?.spot ?? {};
+  const balSpot = ["live-exchange", "agent-os-readonly"].includes(bal?.mode) ? bal?.exchange?.balances ?? {} : bal?.paper?.spot ?? {};
+  const agentReadOnly = health?.provider_mode === "agent-os-readonly";
   const earnNote = (() => {
     const e = sweepResult?.earn;
     if (e && e.ok !== false && e.swept) return `swept $${fmt(e.swept)} to Flexible Earn (${e.source})`;
@@ -347,24 +386,47 @@ export default function Desk() {
     return d?.reason ?? "earn checked";
   })();
   const confirmBlockedReason = !payPreview ? "Run Preview first." : !payPreview.ok ? payPreview.error : "";
+  const decisionStage = fundingPlan?.result
+    ? 5
+    : fundingPlan?.state === "approved"
+      ? 4
+      : fundingPlan
+        ? 3
+        : affordResult
+          ? 2
+          : 1;
+  const verdict = !affordResult
+    ? "Set the obligation and reserve. Cassa will determine what may move."
+    : affordResult.outcome === "affordable_now"
+      ? "Covered now. No conversion is needed."
+      : affordResult.outcome === "affordable_after_conversions"
+        ? "Covered after a bounded recovery plan."
+        : "Not safely affordable under the current rules.";
+  const excludedHoldings = rows
+    .filter((row: any) => row.asset !== "USDC" && (row.protected || row.value_usdc == null || !row.dust_eligible))
+    .slice(0, 5)
+    .map((row: any) => ({
+      asset: row.asset,
+      reason: row.protected ? "protected" : row.value_usdc == null ? "unpriced" : "not eligible for this route",
+    }));
 
   return (
-    <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+    <main className="desk-shell max-w-7xl mx-auto p-4 md:p-6 space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3 pt-2">
         <div>
-          <p className="eyebrow mb-1.5">Cassa desk</p>
+          <p className="eyebrow mb-1.5">Decision ledger / live account control</p>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-extrabold tracking-tight">Command the vault</h1>
-          <span className={`text-xs px-2 py-1 rounded-full ${online ? "bg-green-900 text-green-300" : online === false ? "bg-red-900 text-red-300" : "bg-zinc-800 text-zinc-400"}`}>
+            <h1 className="text-3xl md:text-5xl font-normal font-serif tracking-[-0.045em]">What can safely move?</h1>
+          <span className={`text-[10px] px-2 py-1 border ${online ? "border-emerald-700 text-emerald-300" : online === false ? "border-red-800 text-red-300" : "border-zinc-700 text-zinc-400"}`}>
             {online ? `● live · ${bal?.mode ?? portfolio?.mode ?? ""}` : online === false ? "● backend offline" : "● connecting"}
           </span>
           {health && <span className="text-xs text-zinc-500">earn {health.rails?.earn} · x402 {health.rails?.x402}</span>}
           </div>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <label className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
-            <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} />
-            Dry-run {dryRun ? "ON (safe)" : "OFF (moves funds)"}
+          <label className="flex items-center gap-2 bg-[#11110f] border border-zinc-800 px-3 py-2 text-xs font-mono uppercase tracking-wide">
+            <input type="checkbox" checked={dryRun} disabled={agentReadOnly} onChange={(e) => setDryRun(e.target.checked)} />
+            {agentReadOnly ? "Preview only" : dryRun ? "Paper execution" : "Live execution"}
           </label>
           <button className="btn-ghost" onClick={refresh}>Refresh</button>
         </div>
@@ -373,6 +435,24 @@ export default function Desk() {
       {online === false && (
         <div className="card">Backend not reachable. Run: <code className="text-xs">cd /Users/apple/Documents/cassa && MOCK_MODE=true .venv/bin/python -m uvicorn backend.main:app --port 8000</code></div>
       )}
+
+      <section className={`provider-strip ${provider?.authorized ? "is-connected" : ""}`}>
+        <div>
+          <p className="eyebrow">Account boundary / Binance Agent OS</p>
+          <strong>{provider?.authorized ? "Agentic account authorized" : "Connect the dedicated Agentic account"}</strong>
+        </div>
+        <p>
+          {provider?.authorized
+            ? `${provider.account_scope} · read-only · ${provider.last_success_at ? `verified ${timeAgo(provider.last_success_at)}` : "authorization stored"}`
+            : "OAuth exposes only the permissions approved in Binance. Cassa stores no API key and cannot trade or transfer in this mode."}
+        </p>
+        <div className="provider-actions">
+          {!provider?.authorized && <button className="btn" disabled={busy} onClick={connectAgentOS}>Connect Binance</button>}
+          {provider?.authorized && health?.provider_mode !== "agent-os-readonly" && <span>Select <code>CASSA_PROVIDER=agent-os-readonly</code> and restart to load these balances.</span>}
+          {provider?.authorized && health?.provider_mode === "agent-os-readonly" && <span className="provider-proof">● live read · writes locked</span>}
+        </div>
+        {providerError && <p className="provider-error">{providerError}</p>}
+      </section>
 
       <div className="ticker-tape border-y hairline bg-black/40 overflow-hidden">
         <div className="flex items-center">
@@ -404,7 +484,7 @@ export default function Desk() {
           <section className="card">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">Balance · {bal?.mode ?? "…"}</h2>
-              <span className="text-xs text-zinc-500">source: {bal?.source ?? "…"} · valued at live prices</span>
+              <span className="text-xs text-zinc-500">source: {bal?.source ?? "…"} · {bal?.account_scope ?? "selected ledger"} · valued at live prices</span>
             </div>
             <div className="text-3xl font-extrabold mt-1">${fmt(total)}</div>
             <div className="mt-3 divide-y divide-zinc-800">
@@ -418,7 +498,7 @@ export default function Desk() {
                   </span>
                 </div>
               ))}
-              {rows.length === 0 && <p className="text-sm text-zinc-500">No holdings returned.</p>}
+              {rows.length === 0 && <p className="text-sm text-zinc-500">{bal?.read_error ?? "No holdings returned."}</p>}
             </div>
             <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
               <div className="bg-black/30 rounded-xl p-3"><span className="text-zinc-500 block">Free USDC</span><strong>${fmt(portfolio?.free_usdc)}</strong></div>
@@ -446,11 +526,23 @@ export default function Desk() {
             </div>
           </section>
 
-          <section className="card border-yellow-400/20">
-            <p className="eyebrow mb-1">Decision workspace</p>
-            <h2 className="font-semibold text-xl">Can I afford this?</h2>
-            <p className="text-sm text-zinc-400">Checks cash, other obligations, your reserve, policy, and eligible small-balance recovery. This never moves funds.</p>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-3">
+          <section className="card decision-workspace">
+            <div className="decision-heading">
+              <div>
+                <p className="eyebrow mb-1">Primary decision / read only</p>
+                <h2>Can I afford this?</h2>
+              </div>
+              <p>{verdict}</p>
+            </div>
+            <ol className="decision-rail" aria-label="Decision progress">
+              {["Ask", "Assess", "Plan", "Approve", "Prove"].map((label, index) => (
+                <li key={label} className={decisionStage >= index + 1 ? "is-active" : ""}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>{label}
+                </li>
+              ))}
+            </ol>
+            <p className="decision-context">Cash, existing obligations, the reserve, asset policy, and eligible recovery are evaluated together. This check cannot move funds.</p>
+            <div className="decision-request grid grid-cols-1 md:grid-cols-4 gap-2 mt-4">
               <label className="text-xs">Expense USDC<input className="input mt-1" value={affordAmount} onChange={(e) => { setAffordAmount(e.target.value); setAffordObligationId(undefined); }} inputMode="decimal" /></label>
               <label className="text-xs">Keep as reserve<input className="input mt-1" value={affordReserve} onChange={(e) => setAffordReserve(e.target.value)} inputMode="decimal" /></label>
               <label className="text-xs">Recipient<select className="input mt-1" value={affordRecipient} onChange={(e) => setAffordRecipient(e.target.value)}><option value="">Cash goal only</option>{Object.keys(book).map((k) => <option key={k} value={k}>@{k}</option>)}</select></label>
@@ -463,16 +555,23 @@ export default function Desk() {
             {affordObligationId && <p className="text-xs text-yellow-300 mt-2">Funding obligation #{affordObligationId}; its reservation is excluded once from this calculation.</p>}
             {affordError && <p className="text-red-400 text-sm mt-2">{affordError}</p>}
             {affordResult && (
-              <div className="mt-4 space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`text-sm font-bold px-3 py-1 rounded-full ${affordResult.outcome === "affordable_now" ? "bg-emerald-950 text-emerald-300" : affordResult.outcome === "affordable_after_conversions" ? "bg-yellow-950 text-yellow-300" : "bg-red-950 text-red-300"}`}>{String(affordResult.outcome).replaceAll("_", " ")}</span>
-                  <span className="text-xs text-zinc-500">payment: {affordResult.payment_status}</span>
+              <div className="decision-verdict mt-4 space-y-3">
+                <div className="verdict-topline">
+                  <span className={`verdict-mark ${affordResult.outcome === "affordable_now" ? "is-safe" : affordResult.outcome === "affordable_after_conversions" ? "is-conditional" : "is-blocked"}`}>{String(affordResult.outcome).replaceAll("_", " ")}</span>
+                  <span className="text-xs text-zinc-500">settlement status: {affordResult.payment_status}</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-                  {[['Free', affordResult.free_usdc], ['Other obligations', affordResult.other_obligations_usdc], ['Reserve', affordResult.minimum_reserve_usdc], ['Shortfall', affordResult.shortfall_usdc], ['After plan', affordResult.projected_headroom_usdc]].map(([label, value]) => <div key={label} className="bg-black/30 rounded-xl p-3"><span className="text-zinc-500 block">{label}</span><strong>${fmt(value)}</strong></div>)}
+                <p className="verdict-copy">{verdict}</p>
+                <div className="decision-math">
+                  {[['Free', affordResult.free_usdc], ['Promised elsewhere', affordResult.other_obligations_usdc], ['Keep', affordResult.minimum_reserve_usdc], ['Need to recover', affordResult.shortfall_usdc], ['Left after plan', affordResult.projected_headroom_usdc]].map(([label, value]) => <div key={label}><span>{label}</span><strong>${fmt(value)}</strong></div>)}
                 </div>
                 {affordResult.selected_conversions?.length > 0 && <div className="text-sm"><span className="text-zinc-400">Proposed recovery: </span>{affordResult.selected_conversions.map((c: any) => `${c.asset} ${c.quantity} → est. $${fmt(c.net_usdc)} net`).join(" · ")}</div>}
-                <p className="text-xs text-zinc-500">Conversion values are estimates. Recipient settlement is currently limited to the verified internal-transfer adapter.</p>
+                {excludedHoldings.length > 0 && (
+                  <div className="decision-exclusions">
+                    <span>Left untouched</span>
+                    {excludedHoldings.map((item: any) => <strong key={item.asset}>{item.asset} <small>{item.reason}</small></strong>)}
+                  </div>
+                )}
+                <p className="text-xs text-zinc-500">Estimates are not receipts. Preparing funds and settling with a recipient remain separate actions.</p>
                 {['affordable_now', 'affordable_after_conversions'].includes(affordResult.outcome) && !fundingPlan && (
                   <button className="btn" disabled={busy} onClick={createFundingPlan}>Create reviewable funding plan</button>
                 )}

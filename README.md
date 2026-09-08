@@ -3,11 +3,17 @@ Cash readiness for Binance holdings: protect reserves, recover eligible small
 balances, prepare payment funds, and review every action before execution.
 
 ## Modes
-- `MOCK_MODE=true` (default): local paper ledger with the same request/response
+- `CASSA_PROVIDER=paper` (default): local paper ledger with the same request/response
   schemas as live, priced at live public market data. Preview → confirm →
   ledger entry all execute for real against the local ledger.
-- `MOCK_MODE=false`: live exchange. Requires `BINANCE_API_KEY` +
+- `CASSA_PROVIDER=agent-os-readonly`: the dedicated Agentic sub-account Spot
+  balances through MCP OAuth. Every trade, conversion, transfer, and Earn write
+  is hard-disabled in this mode.
+- `CASSA_PROVIDER=binance-rest`: older live exchange adapter. Requires `BINANCE_API_KEY` +
   `BINANCE_API_SECRET` and fails closed without them. Testnet first.
+
+`MOCK_MODE=true|false` remains a backwards-compatible fallback only when
+`CASSA_PROVIDER` is unset.
 
 The application REST adapter and the Binance Agent OS MCP connection are
 separate trust boundaries. REST keys belong only in the local `.env`. MCP uses
@@ -16,7 +22,13 @@ in this repository or `.env`.
 
 ## Connect Binance Agent OS
 
-This repository includes a project-scoped Codex MCP configuration at
+The app now has its own Binance Agent OS connection strip. The OAuth client
+metadata is in `docs/binance-agent-os-client.json`; its public URL must exist
+before the first browser authorization. Start the backend with
+`CASSA_PROVIDER=agent-os-readonly`, open the decision desk, and select **Connect
+Binance**. Tokens are stored only in the ignored local backend data directory.
+
+For an independent Codex-hosted capability check, this repository also includes
 `.codex/config.toml`. After trusting the project, authenticate once:
 
 ```bash
@@ -28,15 +40,16 @@ Restart Codex, then verify the read-only path:
 > Use the Binance MCP Server to show my Agentic account balances. Do not trade,
 > convert, or transfer anything.
 
-On 2026-09-08 this flow authenticated successfully and returned an empty
-Agentic account overview across the available wallet surfaces. See
+On 2026-09-08 this flow authenticated successfully and returned the funded
+Agentic Spot balances recorded in `CAPABILITIES.md`. See
 `CAPABILITIES.md` for the exact evidence and limitations, and `AGENT.md` for the
 agent workflow and safety contract.
 
 ## Current capability surface
 Market data, balances, positions, Spot, internal sub-account transfer, and
 Simple Earn REST/paper adapters exist. Binance MCP authentication and the
-Agentic asset overview are live-verified. MCP dust conversion, external
+Agentic Spot balance read are live-verified through the Codex host; the in-app
+MCP OAuth and read adapter are implemented with a least-privilege UI. MCP dust conversion, external
 recipient settlement, and Earn actions are not verified.
 Paper mode includes dynamic small-balance discovery, reviewable funding plans,
 and receipt-backed conversion into USDC. Live dust execution remains disabled
@@ -59,7 +72,7 @@ cp .env.example .env
 .venv/bin/python -m uvicorn backend.main:app --port 8000
 cd frontend && npm install && npm run dev
 ```
-Success: backend `/api/health` identifies paper and unverified live adapters;
+Success: backend `/api/health` identifies paper, Agent OS read-only, and REST boundaries;
 `/api/market` returns four live symbols; `/api/capabilities` describes provider
 boundaries; and the frontend builds with zero type errors.
 

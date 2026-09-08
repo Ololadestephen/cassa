@@ -9,6 +9,8 @@ export const api = {
   balance: () => fetch(`${API}/api/balance`).then(j),
   portfolio: () => fetch(`${API}/api/portfolio`).then(j),
   capabilities: () => fetch(`${API}/api/capabilities`).then(j),
+  agentOSStatus: () => fetch(`${API}/api/providers/binance-agent-os/status`).then(j),
+  connectAgentOS: () => fetch(`${API}/api/providers/binance-agent-os/connect`, { method: "POST" }).then(j),
   affordability: (body: { amount: number; payment_fee?: number; minimum_reserve?: number; obligation_id?: number; recipient?: string; allowed_assets?: string[] }) =>
     fetch(`${API}/api/affordability`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(j),
   plans: () => fetch(`${API}/api/plans`).then(j),

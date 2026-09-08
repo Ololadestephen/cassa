@@ -1,6 +1,6 @@
 # Cassa product and implementation plan
 
-Status: Phases 1–2 are complete locally. Binance MCP OAuth and an authenticated Agentic account overview are live-verified. The paper paths for Phase 3 funding execution, Phase 4 obligation settlement, and Phase 5 receipts/reconciliation are implemented and tested; live dust eligibility, route comparison, and authenticated execution remain open.
+Status: Phases 1–2 are complete locally. Binance MCP OAuth, the funded Agentic Spot balance read, and ordinary Convert pair/minimum checks are live-verified. An in-app read-only MCP adapter is implemented and write-isolated. The paper paths for Phase 3 funding execution, Phase 4 obligation settlement, and Phase 5 receipts/reconciliation are implemented and tested; live dust eligibility, route comparison, and authenticated execution remain open.
 Updated: 2026-09-08.
 
 ## Product direction
@@ -24,8 +24,8 @@ Initial scope is a single connected owner and Spot balances. Shared team roles f
 ## Verified capabilities and open questions
 
 Documentation verification is not account-level verification. Cassa has now
-verified MCP authentication and a read-only Agentic asset overview against the
-connected account. That account was empty. No authenticated dust-conversion or
+verified MCP authentication and a read-only Agentic Spot balance response against the
+connected funded account. No authenticated dust-conversion or
 recipient-payment test has established access for this project. The dated
 observations and schemas are recorded in `CAPABILITIES.md`.
 
@@ -36,7 +36,8 @@ observations and schemas are recorded in `CAPABILITIES.md`.
 | Dust execution | `POST /sapi/v1/asset/dust-convert/convert`, accepts `targetAsset` | Preserve provider transaction identifiers and actual charges |
 | Dust history | `GET /sapi/v1/asset/dribblet` | Reconcile uncertain results before retrying |
 | Legacy dust | `/sapi/v1/asset/dust` converts to BNB | Do not present this as direct USDC conversion |
-| Agentic MCP | OAuth and the Agentic account overview succeeded on 2026-09-08; bounded discovery also exposed several futures account and Convert tools | Account read is live-verified; exact Spot, dust, transfer, and Earn action schemas remain gated |
+| Agentic MCP | OAuth and `spot.getAccount` succeeded on 2026-09-08 for the funded Agentic sub-account; the app now implements this exact read behind its own OAuth boundary | Spot balance read is live-verified; dust, transfer, and Earn action schemas remain gated |
+| Ordinary Convert | Pair metadata showed USDC routes for the funded USDT, TWT, USTC, TIA, and 1000CAT balances, with account-visible minimums | Route presence and minimums are evidence only; no quote or acceptance occurred |
 | MCP account boundary | Transfers stay within the Agentic sub-account; no external withdrawal scope | Do not label these transfers as arbitrary teammate payments |
 | Main-account funds | MCP main-account visibility may be read-only | Show visible-but-unspendable balances separately |
 | Recipient payments | Current app uses a sub-account transfer adapter | Verify account eligibility, recipient type, permissions, and receipts before claiming payroll support |
@@ -207,10 +208,10 @@ Plan states: draft, quoted, awaiting approval, approved, executing, completed, p
 
 ### Phase 0 — Capability proof
 
-Status: MCP OAuth, account boundary, and an authenticated empty Agentic account
-overview are verified. Bounded discovery found several futures account and
-Convert schemas but did not establish Spot dust, internal-transfer, or Earn
-action support. See `CAPABILITIES.md`.
+Status: MCP OAuth, account boundary, authenticated funded Spot balances, and
+ordinary Convert pair/minimum metadata are verified. The in-app read-only MCP
+adapter and OAuth endpoints are implemented. No Spot dust, internal-transfer,
+or Earn action support has been established. See `CAPABILITIES.md`.
 
 - Connect the intended account through the supported authentication flow.
 - Inventory actual MCP tools and scopes; confirm account boundaries.
@@ -318,7 +319,7 @@ Show one protected token, one ineligible balance, and one recovered failure. Use
 
 ## Current status
 
-- Implemented: FastAPI/Next.js foundation, transactional state, dynamic portfolio view, paper dust eligibility and conversion, protected assets, USDC obligations, reserves, affordability outcomes, immutable funding plans, asset reservations, exact execution preflight, explicit version approval, obligation readiness, conversion and payment receipts, CSV export, reconciliation UI, chat intent parsing, corrected sweep/payment policy, durable operation IDs, Earn confirmation gates, and an updated demo.
+- Implemented: FastAPI/Next.js foundation, transactional state, dynamic portfolio view, paper dust eligibility and conversion, protected assets, USDC obligations, reserves, affordability outcomes, immutable funding plans, asset reservations, exact execution preflight, explicit version approval, obligation readiness, conversion and payment receipts, CSV export, reconciliation UI, chat intent parsing, corrected sweep/payment policy, durable operation IDs, Earn confirmation gates, in-app Agent OS OAuth/read-only Spot adapter, and an updated demo.
 - Verified: isolated backend financial tests including balance conservation, cost and proceeds bounds, expiry, changed quantities, competing plans, duplicate execution, obligation term binding, receipt persistence/export, protected-asset rechecks and ambiguous-provider resolution; TypeScript checks; production frontend build; public Binance pricing; and preservation of existing JSON configuration/address book data during SQLite import.
-- Known incomplete: authenticated Spot/dust/action capability verification, live dust conversion, comparison with normal Convert and Spot routes, external recipient settlement proof, automatic provider-history reconciliation, current live Earn verification, authentication for public deployment, and full browser end-to-end automation.
+- Known incomplete: completed in-app browser authorization against the newly hosted metadata document, live dust eligibility/conversion, executable comparison with normal Convert and Spot routes, external recipient settlement proof, automatic provider-history reconciliation, current live Earn verification, application-owner authentication for public deployment, and full browser end-to-end automation.
 - Phase 4+ features and the remaining live/multi-route Phase 3 work stay planned until their acceptance gates pass.

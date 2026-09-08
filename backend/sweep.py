@@ -5,7 +5,7 @@ SYMBOL_MAP = {"BTC": "BTCUSDC", "ETH": "ETHUSDC", "SOL": "SOLUSDC", "BNB": "BNBU
 
 
 def _spot_of(balances: dict) -> dict:
-    if balances.get("mode") == "live-exchange":
+    if balances.get("mode") in {"live-exchange", "agent-os-readonly"}:
         return dict(balances.get("exchange", {}).get("balances", {}))
     return dict(balances.get("paper", {}).get("spot", {}))
 

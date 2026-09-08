@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import { DeskNav } from "../components/DeskNav";
 
 function Row({ k, v }: { k: string; v: string }) {
   return (
-    <div className="flex justify-between gap-4 py-2.5 border-b border-zinc-800 text-sm">
+    <div className="flex justify-between gap-4 py-3 border-b border-zinc-800 text-sm">
       <span className="text-zinc-400">{k}</span>
       <span className="font-mono text-right">{v}</span>
     </div>
@@ -30,15 +31,15 @@ export default function PolicyPage() {
     })();
   }, []);
 
-  if (down) return <main className="max-w-3xl mx-auto p-6"><div className="card">Backend unreachable — policy unknown until it is back.</div></main>;
-  if (!health || !config) return <main className="max-w-3xl mx-auto p-6"><div className="card text-sm text-zinc-500">Loading live policy…</div></main>;
+  if (down) return <><DeskNav /><main className="desk-page max-w-4xl mx-auto p-6"><div className="card">Backend unreachable — policy unknown until it is back.</div></main></>;
+  if (!health || !config) return <><DeskNav /><main className="desk-page max-w-4xl mx-auto p-6"><div className="card text-sm text-zinc-500">Loading live policy…</div></main></>;
 
   return (
-    <main className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
-      <header className="pt-2">
-        <p className="eyebrow mb-1.5">Cassa</p>
-        <h1 className="text-3xl font-extrabold tracking-tight">Policy</h1>
-        <p className="text-sm text-zinc-400">Read from the running desk. Enforced in code before any send executes. This page is read-only.</p>
+    <><DeskNav /><main className="desk-page max-w-4xl mx-auto p-4 md:p-6 space-y-4">
+      <header className="desk-page-header pt-5">
+        <p className="eyebrow mb-1.5">Rule book / read only</p>
+        <h1>What Cassa will refuse.</h1>
+        <p>These are active constraints from the running ledger—not marketing promises. They are checked before an execution path opens.</p>
       </header>
       <section className="card">
         <h2 className="font-semibold mb-2">Caps</h2>
@@ -65,6 +66,6 @@ export default function PolicyPage() {
         <Row k="External sends" v="rejected before any execute call" />
         <Row k="Mode" v={health.mock_mode ? "paper ledger" : "live exchange"} />
       </section>
-    </main>
+    </main></>
   );
 }

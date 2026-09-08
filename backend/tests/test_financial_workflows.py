@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 from decimal import Decimal
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
@@ -13,6 +14,8 @@ from backend.obligations import create_obligation, get_obligation, list_obligati
 from backend.services.affordability import assess_affordability
 from backend.services.portfolio import build_portfolio
 from backend.store import DEFAULT_ADDRESSBOOK, DEFAULT_CONFIG, get_paper, load, log_activity, save
+from backend.providers.agent_os import AgentOSConnection, FileTokenStorage
+from mcp.shared.auth import OAuthToken
 
 
 class IsolatedDatabaseTest(unittest.TestCase):
@@ -20,8 +23,10 @@ class IsolatedDatabaseTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.previous_db = os.environ.get("CASSA_DB_PATH")
         self.previous_mock = os.environ.get("MOCK_MODE")
+        self.previous_provider = os.environ.get("CASSA_PROVIDER")
         os.environ["CASSA_DB_PATH"] = os.path.join(self.temp.name, "test.db")
         os.environ["MOCK_MODE"] = "true"
+        os.environ["CASSA_PROVIDER"] = "paper"
         save("config", dict(DEFAULT_CONFIG))
         save("addressbook", dict(DEFAULT_ADDRESSBOOK))
         save("activity", [])
@@ -37,7 +42,73 @@ class IsolatedDatabaseTest(unittest.TestCase):
             os.environ.pop("MOCK_MODE", None)
         else:
             os.environ["MOCK_MODE"] = self.previous_mock
+        if self.previous_provider is None:
+            os.environ.pop("CASSA_PROVIDER", None)
+        else:
+            os.environ["CASSA_PROVIDER"] = self.previous_provider
         self.temp.cleanup()
+
+
+class AgentOSProviderTests(IsolatedDatabaseTest):
+    def test_token_storage_is_private_and_round_trips(self):
+        path = os.path.join(self.temp.name, "oauth.json")
+        storage = FileTokenStorage(path=Path(path))
+        asyncio.run(storage.set_tokens(OAuthToken(access_token="test-token", expires_in=3600)))
+        restored = asyncio.run(storage.get_tokens())
+        self.assertEqual(restored.access_token, "test-token")
+        self.assertEqual(os.stat(path).st_mode & 0o777, 0o600)
+
+    def test_spot_balance_parser_preserves_free_and_locked_amounts(self):
+        connection = AgentOSConnection()
+        payload = {
+            "canTrade": True,
+            "accountType": "SPOT",
+            "balances": [
+                {"asset": "USDT", "free": "6.00000000", "locked": "0.00000000"},
+                {"asset": "TIA", "free": "0.18000000", "locked": "0.00667147"},
+                {"asset": "ZERO", "free": "0", "locked": "0"},
+            ],
+        }
+        with patch.object(connection, "_call_meta", AsyncMock(return_value=payload)):
+            result = asyncio.run(connection.spot_balances())
+        self.assertEqual(result["account_scope"], "agentic-sub-account")
+        self.assertEqual(result["free"]["TIA"], "0.18000000")
+        self.assertEqual(result["locked"]["TIA"], "0.00667147")
+        self.assertEqual(result["balances"]["TIA"], "0.18667147")
+        self.assertNotIn("ZERO", result["balances"])
+
+    def test_agent_os_mode_reads_mcp_balance_without_rest_keys(self):
+        os.environ["CASSA_PROVIDER"] = "agent-os-readonly"
+        live = {
+            "source": "binance-agent-os-mcp",
+            "account_scope": "agentic-sub-account",
+            "balances": {"USDT": "6.0", "TWT": "0.057"},
+            "free": {"USDT": "6.0", "TWT": "0.057"},
+            "locked": {"USDT": "0", "TWT": "0"},
+        }
+        with patch.object(mcp_client.agent_os_connection, "spot_balances", AsyncMock(return_value=live)), patch.object(
+            mcp_client.agent_os_connection, "status", AsyncMock(return_value={"authorized": True})
+        ), patch.object(mcp_client, "get_prices", AsyncMock(return_value={"source": "test", "TWTUSDC": {"price": "0.57"}})), patch.object(
+            mcp_client, "get_exchange_balances", AsyncMock()
+        ) as rest:
+            result = asyncio.run(mcp_client.get_balances())
+        rest.assert_not_awaited()
+        self.assertEqual(result["mode"], "agent-os-readonly")
+        self.assertEqual(result["exchange"]["balances"]["USDT"], "6.0")
+
+    def test_agent_os_mode_rejects_every_write_adapter(self):
+        os.environ["CASSA_PROVIDER"] = "agent-os-readonly"
+        prices = {"source": "test", "BTCUSDC": {"price": "60000"}}
+        with patch.object(mcp_client, "get_prices", AsyncMock(return_value=prices)), patch.object(
+            mcp_client, "_signed_post", AsyncMock()
+        ) as signed:
+            order = asyncio.run(mcp_client.place_spot_order("BTCUSDC", "BUY", 5, False))
+            transfer = asyncio.run(mcp_client.internal_transfer("USDC", 5, "recipient", False))
+            earn = asyncio.run(mcp_client.earn_subscribe("USDC", 5, False))
+        signed.assert_not_awaited()
+        self.assertFalse(order["ok"])
+        self.assertFalse(transfer["ok"])
+        self.assertFalse(earn["ok"])
 
 
 class StoreAndObligationTests(IsolatedDatabaseTest):

@@ -9,14 +9,15 @@ on the connected Binance account.
 Before the repeatable paper story, show Codex connected to
 `binance-agent-os`. Ask for the Agentic account overview with an explicit
 read-only instruction. Show the MCP discovery/execution indicator and the
-returned wallet states. The connected account verified on 2026-09-08 was empty,
-which is acceptable evidence of authenticated access but not evidence of live
-conversion.
+returned wallet states. The connected account verified on 2026-09-08 contained
+6 USDT plus small TWT, USTC, TIA, and 1000CAT balances. No conversion or
+transfer was used to manufacture this proof.
 
-Say: “Cassa connects through Binance Agent OS with revocable account access.
-This account is empty, so the product demo now switches to a clearly labelled
-paper portfolio to demonstrate planning and safeguards without pretending a
-trade occurred.”
+Say: “This is the funded Agentic account, read through Binance Agent OS. Cassa
+does not call every small token dust: TWT and TIA clear the observed ordinary
+Convert minimums, while USTC and 1000CAT do not. The decision layer chooses what
+may move, protects reserves and selected assets, and keeps execution locked
+until the exact route and approval are verified.”
 
 ## Setup
 
@@ -26,6 +27,9 @@ trade occurred.”
 2. Keep dry-run on until the explicit paper-execution moment.
 3. Prepare an expense amount, protected asset, and minimum reserve.
 4. Do not describe internal sub-account movement as payment to an arbitrary external teammate.
+
+Use the paper reset only for the repeatable execution proof. Keep the live
+Agentic account visible as the authentic discovery and route-minimum proof.
 
 ## Two-minute product walkthrough
 

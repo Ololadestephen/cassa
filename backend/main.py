@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
@@ -38,7 +39,8 @@ from .services.portfolio import build_portfolio
 from .plans import approve_plan, create_funding_plan, execute_plan, get_plan, list_plans
 from .receipts import list_receipts, receipts_csv
 from . import mcp_client
-from .store import PAPER_DEFAULT, get_addressbook, get_config, is_mock, load, log_activity, save
+from .providers.agent_os import client_metadata_document, connection as agent_os_connection
+from .store import PAPER_DEFAULT, get_addressbook, get_config, is_agent_os_readonly, is_mock, load, log_activity, provider_mode, save
 
 app = FastAPI(title="Cassa — Idle Cash That Pays Its Team", version="0.3.0")
 app.add_middleware(
@@ -48,23 +50,69 @@ app.add_middleware(
 
 @app.get("/api/health")
 def health() -> dict:
+    mode = provider_mode()
     return {
         "ok": True,
         "service": "cassa",
         "version": "0.3.0",
         "mock_mode": is_mock(),
+        "provider_mode": mode,
+        "writes_enabled": mode in {"paper", "binance-rest"},
         "parser": "groq" if parser_enabled() else "rules",
         "exchange_keys": mcp_client.keys_configured(),
         "testnet": mcp_client.TESTNET,
         "mcp": mcp_client.MCP_URL,
         "rails": {
             "market_data": "live-public",
-            "spot": "paper-or-configured-unverified",
-            "internal_transfer": "paper-or-configured-unverified",
-            "earn": "paper-or-configured-unverified",
+            "spot": "agent-os-readonly" if is_agent_os_readonly() else "paper-or-configured-unverified",
+            "internal_transfer": "disabled" if is_agent_os_readonly() else "paper-or-configured-unverified",
+            "earn": "disabled" if is_agent_os_readonly() else "paper-or-configured-unverified",
             "x402": "SKILL_UNAVAILABLE",
         },
     }
+
+
+@app.get("/api/providers/binance-agent-os/client-metadata.json")
+def binance_agent_os_client_metadata() -> dict:
+    """Public OAuth client metadata; contains no token or account identifier."""
+    return client_metadata_document()
+
+
+@app.get("/api/providers/binance-agent-os/status")
+async def binance_agent_os_status() -> dict:
+    return await agent_os_connection.status()
+
+
+@app.post("/api/providers/binance-agent-os/connect")
+async def connect_binance_agent_os() -> dict:
+    result = await agent_os_connection.begin_connect()
+    if result.get("state") == "error" and not result.get("authorization_url"):
+        raise HTTPException(status_code=502, detail=result.get("error") or "Binance authorization failed")
+    return result
+
+
+@app.get("/api/providers/binance-agent-os/callback", response_class=HTMLResponse)
+async def binance_agent_os_callback(
+    code: str | None = None,
+    state: str | None = None,
+    iss: str | None = None,
+    error: str | None = None,
+) -> HTMLResponse:
+    if error:
+        raise HTTPException(status_code=400, detail="Binance authorization was declined")
+    if not code:
+        raise HTTPException(status_code=400, detail="Binance did not return an authorization code")
+    try:
+        await agent_os_connection.complete_callback(code, state, iss)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return HTMLResponse(
+        """<!doctype html><html><head><title>Cassa connected</title></head>
+        <body style="background:#0b0b09;color:#f1eddd;font-family:system-ui;padding:3rem">
+        <h1>Binance authorization received.</h1><p>Cassa is verifying the read-only account connection.</p>
+        <script>if(window.opener){window.opener.postMessage('cassa-binance-connected','*');window.close()}</script>
+        </body></html>"""
+    )
 
 
 @app.get("/api/market")
@@ -109,21 +157,35 @@ async def portfolio(include_dust: bool = True) -> dict:
 
 
 @app.get("/api/capabilities")
-def capabilities() -> dict:
-    live = not is_mock()
+async def capabilities() -> dict:
+    mode = provider_mode()
+    live = mode != "paper"
     keys = mcp_client.keys_configured()
+    agent_status = await agent_os_connection.status() if is_agent_os_readonly() else None
+    if is_agent_os_readonly():
+        balance_status = "available" if agent_status and agent_status.get("authorized") else "authorization_required"
+        dust_status = "tool_unverified"
+        earn_status = "not_enabled"
+    else:
+        balance_status = "available" if not live or keys else "credentials_required"
+        dust_status = "paper_fixture" if not live else "configured_unverified" if keys else "credentials_required"
+        earn_status = "paper_fixture" if not live else "configured_unverified" if keys else "credentials_required"
     return {
-        "mode": "live-exchange" if live else "paper",
+        "mode": mode,
+        "account_scope": "agentic-sub-account" if is_agent_os_readonly() else "paper" if not live else "exchange-account",
         "capabilities": {
             "market_data": {"status": "available", "source": "binance-public"},
-            "balances": {"status": "available" if not live or keys else "credentials_required"},
-            "dust_discovery": {"status": "paper_fixture" if not live else "configured_unverified" if keys else "credentials_required", "target": "USDC"},
+            "balances": {"status": balance_status, "source": "binance-agent-os-mcp" if is_agent_os_readonly() else None},
+            "dust_discovery": {"status": dust_status, "target": "USDC"},
             "dust_execution": {
                 "status": "paper_only" if not live else "not_enabled",
                 "reason": "approved plans execute against the paper ledger; authenticated live execution remains gated",
             },
-            "recipient_payment": {"status": "internal_transfer_only", "external_settlement": False},
-            "earn": {"status": "paper_fixture" if not live else "configured_unverified" if keys else "credentials_required"},
+            "recipient_payment": {
+                "status": "not_enabled" if is_agent_os_readonly() else "internal_transfer_only",
+                "external_settlement": False,
+            },
+            "earn": {"status": earn_status},
         },
     }
 

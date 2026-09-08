@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { API, api, timeAgo } from "../../lib/api";
+import { DeskNav } from "../components/DeskNav";
 
 function resultOf(row: any): string {
   if (row.ok === false && row.reason === "SKILL_UNAVAILABLE") return "SKILL_UNAVAILABLE";
@@ -10,10 +11,10 @@ function resultOf(row: any): string {
 }
 
 function tone(result: string) {
-  if (result === "EXECUTED") return "bg-green-900 text-green-300";
-  if (result === "NEEDS_CONFIRM") return "bg-yellow-900 text-yellow-300";
-  if (result === "SKILL_UNAVAILABLE") return "bg-red-900 text-red-300";
-  return "bg-zinc-700 text-zinc-200";
+  if (result === "EXECUTED") return "border-[#42a887] text-[#67c8a8]";
+  if (result === "NEEDS_CONFIRM") return "border-[#e1b84d] text-[#e1b84d]";
+  if (result === "SKILL_UNAVAILABLE") return "border-[#d85b42] text-[#e27a65]";
+  return "border-zinc-600 text-zinc-300";
 }
 
 export default function LedgerPage() {
@@ -42,14 +43,14 @@ export default function LedgerPage() {
     }
   }
 
-  if (down) return <main className="max-w-4xl mx-auto p-6"><div className="card">Backend unreachable — ledger unknown until it is back.</div></main>;
+  if (down) return <><DeskNav /><main className="desk-page max-w-5xl mx-auto p-6"><div className="card">Backend unreachable — evidence unknown until the backend returns.</div></main></>;
 
   return (
-    <main className="max-w-4xl mx-auto p-4 md:p-6 space-y-4">
-      <header className="pt-2">
-        <p className="eyebrow mb-1.5">Cassa</p>
-        <h1 className="text-3xl font-extrabold tracking-tight">Ledger</h1>
-        <p className="text-sm text-zinc-400">Append-only. One sequence number per record; results are stated exactly as the API returned them.</p>
+    <><DeskNav /><main className="desk-page max-w-5xl mx-auto p-4 md:p-6 space-y-4">
+      <header className="desk-page-header pt-5">
+        <p className="eyebrow mb-1.5">Evidence book / append only</p>
+        <h1>What actually happened.</h1>
+        <p>One sequence number per record. Estimates, approvals, executions, and unresolved provider outcomes remain visibly different.</p>
       </header>
       <section className="card">
         {rows.length === 0 ? (
@@ -77,7 +78,7 @@ export default function LedgerPage() {
                       {r.detail ? ` · ${r.detail}` : ""}
                     </div>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full justify-self-start ${tone(result)}`}>{result}</span>
+                  <span className={`text-[9px] font-mono tracking-wide border px-2 py-1 justify-self-start ${tone(result)}`}>{result}</span>
                 </div>
               );
             })}
@@ -118,6 +119,6 @@ export default function LedgerPage() {
           </div>
         ))}
       </section>
-    </main>
+    </main></>
   );
 }

@@ -8,7 +8,8 @@ Last verified: 2026-09-08.
 | Capability | Evidence | Status for Cassa |
 | --- | --- | --- |
 | MCP connection | OAuth login completed against `https://agent.binance.com/mcp/agentic` | Live verified |
-| Agentic asset overview | Authenticated MCP discovery and read returned totals for Spot, Funding, Cross Margin, Isolated Margin, USDⓈ-M Futures, COIN-M Futures, Earn, and Copy Trading | Live verified; connected account was empty |
+| Agentic asset overview | Authenticated MCP discovery and read returned totals for Spot, Funding, Cross Margin, Isolated Margin, USDⓈ-M Futures, COIN-M Futures, Earn, and Copy Trading | Live verified; the account is now funded |
+| Agentic Spot balances | `spot.getAccount` with `omitZeroBalances`; response preserved free and locked quantities | Live verified: 6 USDT, 0.057 TWT, 0.892 USTC, 0.18667147 TIA, and 1.03433979 1000CAT free; no locked amount observed |
 | Options and Trading Bots | The same overview reported these wallets inactive/unavailable | Live observed |
 | Main-account asset metadata | Bounded discovery exposed `sub_account.getMainAccountAsset` with no required input and `USER_DATA` read classification | Discovered, not used for Cassa spendable funds |
 | Futures account balances | Discovery exposed COIN-M and USDⓈ-M account/balance reads | Discovered; not needed for initial Spot cash workflow |
@@ -17,7 +18,7 @@ Last verified: 2026-09-08.
 | Futures Convert status | `futures_usds.orderStatus`; description requires `orderId` or `quoteId` | Discovered read surface, not executed |
 | Futures Convert acceptance | `futures_usds.acceptTheOfferedQuote`; requires `quoteId` | Write surface; never executed; exact user confirmation required |
 | Spot ticker / 24-hour change | Supported by current Binance documentation; exact tool schema was not retained by bounded account discovery | Documented, not live-verified in this project |
-| Spot balances by asset | Aggregate Agentic overview was verified, but the exact per-asset Spot schema was not retained | Partially verified; connected account had no assets |
+| Ordinary Convert route checks | Read-only pair checks showed USDT, TWT, USTC, TIA, and 1000CAT support a route to USDC. Observed ordinary minimums were 0.01 USDT, 0.018 TWT, 1.8 USTC, 0.024 TIA, and 4.7 1000CAT | Live metadata observed; no quote requested and no conversion executed. Current USTC and 1000CAT quantities were below these ordinary minimums |
 | Dust eligibility to USDC | No matching MCP tool was found in the bounded discovery sample. Signed Wallet API endpoints are documented separately | Not MCP-verified; paper only in Cassa |
 | Dust execution | No matching MCP tool was found in bounded discovery | Not enabled live |
 | Internal Agentic transfer | Documented as wallet-to-wallet inside the same Agentic sub-account; no exact tool was retained in bounded discovery | Documented, not a recipient-payment rail |
@@ -36,6 +37,15 @@ account returns an exact schema and required permission.
    trade or transfer anything.”
 4. Confirm the transcript shows Binance MCP discovery and execution, and that
    the response identifies the account boundary and wallet states.
+
+## In-app read boundary
+
+`CASSA_PROVIDER=agent-os-readonly` calls the same Agentic Spot read through the
+official MCP Python SDK. The app stores OAuth material in the ignored local
+backend data directory with owner-only file permissions, separates free and
+locked quantities, and rejects every write adapter before REST or MCP execution.
+The client metadata document must be available at its configured public HTTPS
+URL before browser authorization can complete.
 
 Official references:
 
