@@ -402,7 +402,7 @@ export default function Desk() {
           </div>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <label className="flex items-center gap-2 bg-[#11110f] border border-zinc-800 px-3 py-2 text-xs font-mono uppercase tracking-wide">
+          <label className="mode-control flex items-center gap-2 border px-3 py-2 text-xs font-mono uppercase tracking-wide">
             <input type="checkbox" checked={dryRun} disabled={agentReadOnly} onChange={(e) => setDryRun(e.target.checked)} />
             {agentReadOnly ? "Preview only" : dryRun ? "Paper execution" : "Live execution"}
           </label>
@@ -436,7 +436,7 @@ export default function Desk() {
         {providerNotice && <p className="provider-note">{providerNotice}</p>}
       </section>
 
-      <div className="ticker-tape border-y hairline bg-black/40 overflow-hidden">
+      <div className="ticker-tape border-y hairline overflow-hidden">
         <div className="flex items-center">
           <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-400 px-3 py-2 border-r hairline shrink-0">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live
@@ -475,19 +475,19 @@ export default function Desk() {
                   <span className="font-mono">{r.asset} <span className="text-zinc-500">{r.quantity}</span></span>
                   <span className="flex items-center gap-2">
                     <span>{r.value_usdc == null ? "unpriced" : `$${fmt(r.value_usdc)}`}</span>
-                    {r.dust_eligible && <span className="text-[10px] rounded-full bg-emerald-950 text-emerald-300 px-2 py-0.5">recover ${fmt(r.recoverable_usdc)}</span>}
-                    {r.ordinary_convert_route_status === "above_minimum" && <span className="text-[10px] rounded-full bg-sky-950 text-sky-300 px-2 py-0.5">Convert route · min {r.ordinary_convert_minimum}</span>}
-                    {r.ordinary_convert_route_status === "below_minimum" && <span className="text-[10px] rounded-full bg-amber-950 text-amber-300 px-2 py-0.5">below Convert min {r.ordinary_convert_minimum}</span>}
-                    {r.asset !== "USDC" && <button className="text-[10px] text-zinc-400 hover:text-white" disabled={busy} onClick={() => toggleProtection(r.asset, r.protected)}>{r.protected ? "Unprotect" : "Protect"}</button>}
+                    {r.dust_eligible && <span className="asset-badge is-safe">recover ${fmt(r.recoverable_usdc)}</span>}
+                    {r.ordinary_convert_route_status === "above_minimum" && <span className="asset-badge is-route">Convert route · min {r.ordinary_convert_minimum}</span>}
+                    {r.ordinary_convert_route_status === "below_minimum" && <span className="asset-badge is-signal">below Convert min {r.ordinary_convert_minimum}</span>}
+                    {r.asset !== "USDC" && <button className="ledger-link text-[10px]" disabled={busy} onClick={() => toggleProtection(r.asset, r.protected)}>{r.protected ? "Unprotect" : "Protect"}</button>}
                   </span>
                 </div>
               ))}
               {rows.length === 0 && <p className="text-sm text-zinc-500">{bal?.read_error ?? "No holdings returned."}</p>}
             </div>
             <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
-              <div className="bg-black/30 rounded-xl p-3"><span className="text-zinc-500 block">Free USDC</span><strong>${fmt(portfolio?.free_usdc)}</strong></div>
-              <div className="bg-black/30 rounded-xl p-3"><span className="text-zinc-500 block">Reserved</span><strong>${fmt(portfolio?.reserved_usdc)}</strong></div>
-              <div className="bg-black/30 rounded-xl p-3"><span className="text-zinc-500 block">Spendable</span><strong>${fmt(portfolio?.spendable_after_reservations_usdc)}</strong></div>
+              <div className="ledger-stat"><span className="text-zinc-500 block">Free USDC</span><strong>${fmt(portfolio?.free_usdc)}</strong></div>
+              <div className="ledger-stat"><span className="text-zinc-500 block">Reserved</span><strong>${fmt(portfolio?.reserved_usdc)}</strong></div>
+              <div className="ledger-stat"><span className="text-zinc-500 block">Spendable</span><strong>${fmt(portfolio?.spendable_after_reservations_usdc)}</strong></div>
             </div>
             <p className="text-xs text-zinc-500 mt-2">Dust discovery: {portfolio?.dust?.source ?? portfolio?.dust?.reason ?? "…"} · execution {capabilities?.capabilities?.dust_execution?.status ?? "unknown"}</p>
             <div className="mt-3 border-t hairline pt-3">
@@ -563,7 +563,7 @@ export default function Desk() {
             )}
             {planError && <p className="text-red-400 text-sm mt-3">Plan: {planError}</p>}
             {fundingPlan && (
-              <div className="mt-4 rounded-2xl border border-yellow-400/30 bg-yellow-950/10 p-4 space-y-3">
+              <div className="plan-card mt-4 p-4 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="eyebrow">Immutable plan · v{fundingPlan.version}</p>
@@ -604,14 +604,14 @@ export default function Desk() {
                 {fundingPlans.slice(0, 5).map((plan) => (
                   <div key={plan.id} className="flex flex-wrap items-center justify-between gap-2 text-xs py-1.5 border-b border-zinc-800">
                     <span>v{plan.version} · ${fmt(plan.request.amount)} · {String(plan.state).replaceAll('_', ' ')} · {plan.steps.length} conversion{plan.steps.length === 1 ? '' : 's'}</span>
-                    <button className="text-yellow-400 hover:underline" onClick={() => { setFundingPlan(plan); setPlanError(''); }}>Review</button>
+                    <button className="ledger-link" onClick={() => { setFundingPlan(plan); setPlanError(''); }}>Review</button>
                   </div>
                 ))}
               </div>
             )}
             <div className="mt-4 border-t hairline pt-3">
               <h3 className="text-sm font-semibold">Reserved obligations ({obligations.filter((o) => ['reserved','ready'].includes(o.status)).length})</h3>
-              {obligations.length === 0 ? <p className="text-xs text-zinc-500 mt-1">No obligations saved.</p> : obligations.slice(0, 5).map((o) => <div key={o.id} className="flex items-center justify-between gap-2 text-xs py-1.5 border-b border-zinc-800"><span>#{o.id} {o.memo || 'Obligation'} · {o.amount} {o.asset} {o.recipient ? `→ @${o.recipient}` : ''} {o.funding_plan_id ? '· plan linked' : ''}</span><span className="flex items-center gap-2"><span className={o.status === 'ready' ? 'text-emerald-300' : 'text-zinc-500'}>{o.status}</span>{['reserved','ready'].includes(o.status) && <button className="text-yellow-400 hover:underline" onClick={() => useObligation(o)}>Use</button>}</span></div>)}
+              {obligations.length === 0 ? <p className="text-xs text-zinc-500 mt-1">No obligations saved.</p> : obligations.slice(0, 5).map((o) => <div key={o.id} className="flex items-center justify-between gap-2 text-xs py-1.5 border-b border-zinc-800"><span>#{o.id} {o.memo || 'Obligation'} · {o.amount} {o.asset} {o.recipient ? `→ @${o.recipient}` : ''} {o.funding_plan_id ? '· plan linked' : ''}</span><span className="flex items-center gap-2"><span className={o.status === 'ready' ? 'text-emerald-300' : 'text-zinc-500'}>{o.status}</span>{['reserved','ready'].includes(o.status) && <button className="ledger-link" onClick={() => useObligation(o)}>Use</button>}</span></div>)}
             </div>
           </section>
 
@@ -684,7 +684,7 @@ export default function Desk() {
           <section className="card">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold">Digest</h2>
-              <a href="/activity" className="text-xs text-yellow-400 hover:underline">Full ledger →</a>
+              <a href="/activity" className="ledger-link text-xs">Full ledger →</a>
             </div>
             {digest ? (
               <div className="text-sm space-y-1">
@@ -697,7 +697,7 @@ export default function Desk() {
           <section className="card">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold">Activity — latest</h2>
-              <a href="/activity" className="text-xs text-yellow-400 hover:underline">Full ledger →</a>
+              <a href="/activity" className="ledger-link text-xs">Full ledger →</a>
             </div>
             {activity.length === 0 ? <p className="text-sm text-zinc-500">Nothing recorded yet.</p> :
               activity.slice(0, 6).map((a: any) => (
@@ -713,13 +713,13 @@ export default function Desk() {
       {!chatOpen ? (
         <button
           onClick={() => { setChatOpen(true); setUnread(0); }}
-          className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 bg-yellow-400 text-black font-bold rounded-full pl-2 pr-4 py-2 shadow-[0_12px_36px_-10px_rgba(250,204,21,0.6)] hover:brightness-110 transition"
+          className="chat-launcher fixed bottom-5 right-5 z-50 flex items-center gap-2.5 font-bold pl-2 pr-4 py-2 transition"
           aria-label="Open chat with Cassa"
         >
           <img src="/logo-mark.svg" alt="" width="28" height="28" className="h-7 w-7 rounded-full" />
           Chat
           {unread > 0 && (
-            <span className="min-w-5 min-h-5 px-1 rounded-full bg-black text-yellow-400 text-[11px] font-extrabold flex items-center justify-center">{unread}</span>
+            <span className="chat-unread min-w-5 min-h-5 px-1 text-[11px] font-extrabold flex items-center justify-center">{unread}</span>
           )}
         </button>
       ) : (
@@ -727,11 +727,11 @@ export default function Desk() {
           <div className="flex items-center gap-2 mb-2">
             <img src="/logo-mark.svg" alt="Cassa" width="22" height="22" className="h-[22px] w-[22px] rounded-lg" />
             <h2 className="font-semibold text-sm">Chat with Cassa</h2>
-            <button onClick={() => setChatOpen(false)} className="ml-auto text-zinc-500 hover:text-white text-xl leading-none px-2" aria-label="Minimize chat">–</button>
+            <button onClick={() => setChatOpen(false)} className="ledger-link ml-auto text-xl leading-none px-2" aria-label="Minimize chat">–</button>
           </div>
           <div className="flex flex-wrap gap-1.5 my-2">
             {["balance", "sweep", "pay @alice 10 USDC", "prices BTC", "digest"].map((q) => (
-              <button key={q} className="text-xs bg-zinc-800 hover:bg-zinc-700 rounded-full px-3 py-1" onClick={() => send(q)}>{q}</button>
+              <button key={q} className="chat-prompt text-xs px-3 py-1" onClick={() => send(q)}>{q}</button>
             ))}
           </div>
           <div ref={scrollRef} className="flex-1 overflow-auto space-y-3 my-2 pr-1">
@@ -740,13 +740,13 @@ export default function Desk() {
                 {m.role === "cassa" ? (
                   <img src="/logo-mark.svg" alt="Cassa" width="24" height="24" className="h-6 w-6 rounded-lg mt-0.5 shrink-0" />
                 ) : (
-                  <span className="h-6 w-6 rounded-lg mt-0.5 shrink-0 bg-white/10 border border-white/15" />
+                  <span className="chat-avatar h-6 w-6 mt-0.5 shrink-0 border" />
                 )}
                 <div className={`max-w-[86%] ${m.role === "you" ? "text-right" : ""}`}>
                   {m.role === "cassa" && m.kind && (
                     <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-1">{m.kind}{m.via ? ` · ${m.via}` : ""}</div>
                   )}
-                  <div className={`inline-block px-3 py-2 rounded-xl text-sm whitespace-pre-wrap text-left ${m.role === "you" ? "bg-yellow-400 text-black" : "bg-zinc-800 border border-white/[0.06]"}`}>{m.text}</div>
+                  <div className={`chat-message inline-block px-3 py-2 text-sm whitespace-pre-wrap text-left ${m.role === "you" ? "is-user" : "is-cassa"}`}>{m.text}</div>
                   {m.at && (
                     <div className="text-[10px] text-zinc-600 mt-1">
                       {new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -758,7 +758,7 @@ export default function Desk() {
             {busy && (
               <div className="msg-in flex gap-2">
                 <img src="/logo-mark.svg" alt="" width="24" height="24" className="h-6 w-6 rounded-lg mt-0.5 shrink-0" />
-                <div className="bg-zinc-800 border border-white/[0.06] rounded-xl px-4 py-3.5 flex gap-1.5 items-center" aria-label="Cassa is typing">
+                <div className="chat-typing border px-4 py-3.5 flex gap-1.5 items-center" aria-label="Cassa is typing">
                   {[0, 1, 2].map((d) => (
                     <span key={d} className="typing-dot h-1.5 w-1.5 rounded-full bg-zinc-400" style={{ animationDelay: `${d * 0.18}s` }} />
                   ))}

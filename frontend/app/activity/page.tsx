@@ -11,10 +11,10 @@ function resultOf(row: any): string {
 }
 
 function tone(result: string) {
-  if (result === "EXECUTED") return "border-[#42a887] text-[#67c8a8]";
-  if (result === "NEEDS_CONFIRM") return "border-[#e1b84d] text-[#e1b84d]";
-  if (result === "SKILL_UNAVAILABLE") return "border-[#d85b42] text-[#e27a65]";
-  return "border-zinc-600 text-zinc-300";
+  if (result === "EXECUTED") return "status-chip is-safe";
+  if (result === "NEEDS_CONFIRM") return "status-chip is-signal";
+  if (result === "SKILL_UNAVAILABLE") return "status-chip is-signal";
+  return "status-chip";
 }
 
 export default function LedgerPage() {
