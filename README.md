@@ -2,13 +2,15 @@
 Cash readiness for Binance holdings: protect reserves, recover eligible small
 balances, prepare payment funds, and review every action before execution.
 
+Hackathon recording, claims, X copy, and final checklist: [`SUBMISSION.md`](SUBMISSION.md).
+
 ## Modes
 - `CASSA_PROVIDER=paper` (default): local paper ledger with the same request/response
   schemas as live, priced at live public market data. Preview → confirm →
   ledger entry all execute for real against the local ledger.
-- `CASSA_PROVIDER=agent-os-readonly`: the dedicated Agentic sub-account Spot
-  balances through MCP OAuth. Every trade, conversion, transfer, and Earn write
-  is hard-disabled in this mode.
+- `CASSA_PROVIDER=agent-os-readonly`: a read-only Agentic Spot snapshot imported
+  from Binance Agent OS by the supported Codex host. Every trade, conversion,
+  transfer, and Earn write is hard-disabled in this mode.
 - `CASSA_PROVIDER=binance-rest`: older live exchange adapter. Requires `BINANCE_API_KEY` +
   `BINANCE_API_SECRET` and fails closed without them. Testnet first.
 
@@ -20,13 +22,13 @@ separate trust boundaries. REST keys belong only in the local `.env`. MCP uses
 browser OAuth stored by the supported agent host; MCP credentials never belong
 in this repository or `.env`.
 
-## Connect Binance Agent OS
+## Connect Binance Agent OS through Codex
 
-The app now has its own Binance Agent OS connection strip. The OAuth client
-metadata is in `docs/binance-agent-os-client.json`; its public URL must exist
-before the first browser authorization. Start the backend with
-`CASSA_PROVIDER=agent-os-readonly`, open the decision desk, and select **Connect
-Binance**. Tokens are stored only in the ignored local backend data directory.
+Binance rejected Cassa's attempted standalone OAuth client with its
+"AI Agent ... not currently supported" response. Binance Login OAuth is
+currently partner-only, so the app no longer presents a misleading direct
+connect button or stores MCP credentials. Authentication stays in a supported
+host—Codex—and Cassa receives only validated, credential-free observations.
 
 For an independent Codex-hosted capability check, this repository also includes
 `.codex/config.toml`. After trusting the project, authenticate once:
@@ -35,10 +37,11 @@ For an independent Codex-hosted capability check, this repository also includes
 codex mcp login binance-agent-os
 ```
 
-Restart Codex, then verify the read-only path:
+Restart Codex so it loads both configured MCP servers, then run the read-only
+sync:
 
-> Use the Binance MCP Server to show my Agentic account balances. Do not trade,
-> convert, or transfer anything.
+> Use the Binance MCP Server to read my Agentic Spot balances, then sync those
+> exact balances to Cassa. Do not trade, convert, or transfer anything.
 
 On 2026-09-08 this flow authenticated successfully and returned the funded
 Agentic Spot balances recorded in `CAPABILITIES.md`. See
@@ -48,8 +51,9 @@ agent workflow and safety contract.
 ## Current capability surface
 Market data, balances, positions, Spot, internal sub-account transfer, and
 Simple Earn REST/paper adapters exist. Binance MCP authentication and the
-Agentic Spot balance read are live-verified through the Codex host; the in-app
-MCP OAuth and read adapter are implemented with a least-privilege UI. MCP dust conversion, external
+Agentic Spot balance read are live-verified through the Codex host; the app uses
+a local Cassa MCP tool to persist a read-only snapshot without copying tokens.
+MCP dust conversion, external
 recipient settlement, and Earn actions are not verified.
 Paper mode includes dynamic small-balance discovery, reviewable funding plans,
 and receipt-backed conversion into USDC. Live dust execution remains disabled

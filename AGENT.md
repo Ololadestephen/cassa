@@ -12,9 +12,9 @@ Cassa remains the source of truth for application policy and plan state.
 ## Required host setup
 
 1. Trust this project so Codex loads `.codex/config.toml`.
-2. For Codex-hosted verification, run `codex mcp login binance-agent-os`. For
-   the product UI, set `CASSA_PROVIDER=agent-os-readonly`, ensure the configured
-   HTTPS client metadata document is public, and use **Connect Binance**.
+2. Run `codex mcp login binance-agent-os`, then restart Codex so it loads both
+   `binance-agent-os` and the local `cassa` server from `.codex/config.toml`.
+   Set `CASSA_PROVIDER=agent-os-readonly` for the product UI.
 3. Start with Market data and Account scopes. Add Trade only for a specifically
    approved integration test. Transfer is not needed for cash-readiness
    planning.
@@ -22,8 +22,7 @@ Cassa remains the source of truth for application policy and plan state.
 
 OAuth credentials, Binance keys, authorization URLs, and account identifiers
 must never be copied into this repository, chat output, activity logs, or demo
-artifacts. Callback and client-metadata URLs may be documented because they
-contain no credential.
+artifacts. Binance authentication stays in the supported agent host.
 
 ## Capability discovery
 
@@ -45,27 +44,30 @@ The observed, dated evidence is recorded in `CAPABILITIES.md`.
 
 1. Read the Agentic account asset overview and relevant current prices through
    Binance MCP.
-2. Show free, locked, protected, reserved, read-only, unpriced, and unavailable
+2. Call Cassa's `sync_agentic_spot_snapshot` tool with the exact nonzero Spot
+   balances. Add Convert route/minimum observations only when they came from a
+   fresh provider read; they are evidence, not quotes or approvals.
+3. Show free, locked, protected, reserved, read-only, unpriced, and unavailable
    funds separately.
-3. Ask for expense amount, recipient or cash goal, payment fee if known, and
+4. Ask for expense amount, recipient or cash goal, payment fee if known, and
    minimum reserve.
-4. Use Cassa's deterministic affordability service. For the reference case,
+5. Use Cassa's deterministic affordability service. For the reference case,
    18 USDC free - 5 USDC reserve leaves 13 USDC headroom, so a 25 USDC expense
    has a 12 USDC shortfall before additional payment fees.
-5. Discover provider eligibility for every nonzero holding. Dust means a small
+6. Discover provider eligibility for every nonzero holding. Dust means a small
    total holding value, not a low token unit price. Never hardcode major coins.
-6. Propose only supported, unprotected sources needed to cover the shortfall.
+7. Propose only supported, unprotected sources needed to cover the shortfall.
    Explain gross value, costs, net proceeds, whole-balance behavior, expiry,
    and excluded assets.
-7. Planning and preview calls never grant approval. Bind approval to the exact
+8. Planning and preview calls never grant approval. Bind approval to the exact
    account, plan version, assets, quantities or bounds, recipient, cost limits,
    and validity window.
-8. Immediately before any write, re-read balances, policy, quote validity, and
+9. Immediately before any write, re-read balances, policy, quote validity, and
    permissions. Binance's own confirmation is required in addition to Cassa's
    application approval.
-9. Persist each successful step and provider identifier. Reconcile ambiguous
+10. Persist each successful step and provider identifier. Reconcile ambiguous
    results before retrying. Never repeat a completed conversion or payment.
-10. After conversion, re-read balances and recompute affordability. Conversion
+11. After conversion, re-read balances and recompute affordability. Conversion
     means funds are prepared; it does not prove the recipient was paid.
 
 ## Hard safety boundaries
@@ -89,6 +91,11 @@ Read-only live proof:
 
 > Use the Binance MCP Server to show my Agentic account balances. Do not trade,
 > convert, subscribe, redeem, or transfer anything.
+
+Then sync the observation:
+
+> Sync those exact Agentic Spot balances to Cassa. Do not trade, convert, or
+> transfer anything.
 
 Product proof:
 

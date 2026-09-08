@@ -38,16 +38,18 @@ account returns an exact schema and required permission.
 4. Confirm the transcript shows Binance MCP discovery and execution, and that
    the response identifies the account boundary and wallet states.
 
-## In-app read boundary
+## Supported-host read boundary
 
-`CASSA_PROVIDER=agent-os-readonly` calls the same Agentic Spot read through the
-official MCP Python SDK. The app stores OAuth material in the ignored local
-backend data directory with owner-only file permissions, separates free and
-locked quantities, and rejects every write adapter before REST or MCP execution.
-The client metadata document must be available at its configured public HTTPS
-URL before browser authorization can complete.
+Binance rejected Cassa's standalone OAuth attempt with its unsupported-agent
+response. The official Binance Login documentation says OAuth access is
+currently limited to close ecosystem partners. Cassa therefore keeps OAuth in
+the supported Codex host. Its local MCP tool accepts only exact decimal balance
+and route observations, stores no credentials or account identifiers, and
+rejects every write adapter. Route/minimum observations remain evidence only;
+they are not dust eligibility, a quote, or an execution receipt.
 
 Official references:
 
 - https://developers.binance.com/en/docs/agent-native/mcp-server/agentic
+- https://developers.binance.com/en/docs/products/login/introduction
 - https://www.binance.com/en/support/faq/detail/7a6e676e36fb455d96478932cb12d9f3

@@ -7,9 +7,10 @@ on the connected Binance account.
 ## Live Agent OS proof — 20 seconds
 
 Before the repeatable paper story, show Codex connected to
-`binance-agent-os`. Ask for the Agentic account overview with an explicit
-read-only instruction. Show the MCP discovery/execution indicator and the
-returned wallet states. The connected account verified on 2026-09-08 contained
+`binance-agent-os`. Ask it to read the Agentic account and sync the exact Spot
+observation to Cassa, with an explicit read-only instruction. Show the Binance
+MCP read, the Cassa sync-tool result, and then refresh the decision desk. The
+connected account verified on 2026-09-08 contained
 6 USDT plus small TWT, USTC, TIA, and 1000CAT balances. No conversion or
 transfer was used to manufacture this proof.
 

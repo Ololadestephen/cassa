@@ -22,7 +22,7 @@ export default function Desk() {
   const [obligations, setObligations] = useState<any[]>([]);
   const [capabilities, setCapabilities] = useState<any>(null);
   const [provider, setProvider] = useState<any>(null);
-  const [providerError, setProviderError] = useState("");
+  const [providerNotice, setProviderNotice] = useState("");
   const [msgs, setMsgs] = useState<ChatMsg[]>([
     { role: "cassa", text: "Check what you can afford, protect holdings, prepare payment funds, and review every action before execution." },
   ]);
@@ -92,38 +92,16 @@ export default function Desk() {
   }, [refresh]);
 
   useEffect(() => {
-    const receiveAuthorization = (event: MessageEvent) => {
-      if (event.data === "cassa-binance-connected") {
-        setProviderError("");
-        window.setTimeout(refresh, 800);
-      }
-    };
-    window.addEventListener("message", receiveAuthorization);
-    return () => window.removeEventListener("message", receiveAuthorization);
-  }, [refresh]);
-
-  useEffect(() => {
     if (health?.provider_mode === "agent-os-readonly") setDryRun(true);
   }, [health?.provider_mode]);
 
-  async function connectAgentOS() {
-    setProviderError("");
-    const popup = window.open("about:blank", "cassa-binance-auth", "popup,width=540,height=760");
+  async function copySyncPrompt() {
+    const prompt = provider?.sync_prompt ?? "Sync my Agentic account balances to Cassa. Do not trade, convert, or transfer anything.";
     try {
-      const result = await api.connectAgentOS();
-      setProvider(result);
-      if (result.authorization_url) {
-        if (popup) popup.location.href = result.authorization_url;
-        else window.location.href = result.authorization_url;
-      } else {
-        popup?.close();
-        await refresh();
-      }
-    } catch (error: any) {
-      popup?.close();
-      let reason = error.message;
-      try { reason = JSON.parse(error.message)?.detail ?? error.message; } catch {}
-      setProviderError(String(reason).slice(0, 300));
+      await navigator.clipboard.writeText(prompt);
+      setProviderNotice("Sync prompt copied. Run it in the Codex task that has Binance Agent OS connected.");
+    } catch {
+      setProviderNotice(prompt);
     }
   }
 
@@ -436,22 +414,26 @@ export default function Desk() {
         <div className="card">Backend not reachable. Run: <code className="text-xs">cd /Users/apple/Documents/cassa && MOCK_MODE=true .venv/bin/python -m uvicorn backend.main:app --port 8000</code></div>
       )}
 
-      <section className={`provider-strip ${provider?.authorized ? "is-connected" : ""}`}>
+      <section className={`provider-strip ${provider?.snapshot_available ? "is-connected" : ""}`}>
         <div>
           <p className="eyebrow">Account boundary / Binance Agent OS</p>
-          <strong>{provider?.authorized ? "Agentic account authorized" : "Connect the dedicated Agentic account"}</strong>
+          <strong>{provider?.snapshot_available ? "Agentic snapshot synced" : "Sync through the supported Codex agent"}</strong>
         </div>
         <p>
-          {provider?.authorized
-            ? `${provider.account_scope} · read-only · ${provider.last_success_at ? `verified ${timeAgo(provider.last_success_at)}` : "authorization stored"}`
-            : "OAuth exposes only the permissions approved in Binance. Cassa stores no API key and cannot trade or transfer in this mode."}
+          {provider?.snapshot_available
+            ? `Codex authenticated with Agent OS · ${provider.account_scope} · read-only · synced ${timeAgo(provider.last_success_at)}`
+            : "Binance authentication stays in Codex. Cassa receives only validated balance observations and stores no OAuth token or API key."}
         </p>
         <div className="provider-actions">
-          {!provider?.authorized && <button className="btn" disabled={busy} onClick={connectAgentOS}>Connect Binance</button>}
-          {provider?.authorized && health?.provider_mode !== "agent-os-readonly" && <span>Select <code>CASSA_PROVIDER=agent-os-readonly</code> and restart to load these balances.</span>}
-          {provider?.authorized && health?.provider_mode === "agent-os-readonly" && <span className="provider-proof">● live read · writes locked</span>}
+          {!provider?.snapshot_available && <button className="btn" disabled={busy} onClick={copySyncPrompt}>Copy sync prompt</button>}
+          {provider?.snapshot_available && health?.provider_mode !== "agent-os-readonly" && <span>Select <code>CASSA_PROVIDER=agent-os-readonly</code> and restart to load this snapshot.</span>}
+          {provider?.snapshot_available && health?.provider_mode === "agent-os-readonly" && (
+            <span className={provider?.stale ? "text-amber-300" : "provider-proof"}>
+              {provider?.stale ? "● stale snapshot · sync again in Codex" : "● supported-host read · writes locked"}
+            </span>
+          )}
         </div>
-        {providerError && <p className="provider-error">{providerError}</p>}
+        {providerNotice && <p className="provider-note">{providerNotice}</p>}
       </section>
 
       <div className="ticker-tape border-y hairline bg-black/40 overflow-hidden">
@@ -494,6 +476,8 @@ export default function Desk() {
                   <span className="flex items-center gap-2">
                     <span>{r.value_usdc == null ? "unpriced" : `$${fmt(r.value_usdc)}`}</span>
                     {r.dust_eligible && <span className="text-[10px] rounded-full bg-emerald-950 text-emerald-300 px-2 py-0.5">recover ${fmt(r.recoverable_usdc)}</span>}
+                    {r.ordinary_convert_route_status === "above_minimum" && <span className="text-[10px] rounded-full bg-sky-950 text-sky-300 px-2 py-0.5">Convert route · min {r.ordinary_convert_minimum}</span>}
+                    {r.ordinary_convert_route_status === "below_minimum" && <span className="text-[10px] rounded-full bg-amber-950 text-amber-300 px-2 py-0.5">below Convert min {r.ordinary_convert_minimum}</span>}
                     {r.asset !== "USDC" && <button className="text-[10px] text-zinc-400 hover:text-white" disabled={busy} onClick={() => toggleProtection(r.asset, r.protected)}>{r.protected ? "Unprotect" : "Protect"}</button>}
                   </span>
                 </div>

@@ -41,6 +41,11 @@ async def build_portfolio(include_dust: bool = True, balances: dict | None = Non
         except Exception as exc:
             dust = {"available": False, "reason": "provider_unavailable", "error": str(exc), "details": []}
     eligible = {str(item.get("asset", "")).upper(): item for item in dust.get("details", [])}
+    route_observations = {
+        str(item.get("from_asset", "")).upper(): item
+        for item in balances.get("convert_routes", [])
+        if str(item.get("to_asset", "")).upper() == "USDC"
+    }
     policies = get_asset_policies()
     threshold = Decimal(str(get_config().get("dust_under_usdc", 5)))
     rows = []
@@ -64,6 +69,14 @@ async def build_portfolio(include_dust: bool = True, balances: dict | None = Non
             total += value
 
         provider = eligible.get(asset)
+        route = route_observations.get(asset)
+        route_minimum = _decimal((route or {}).get("minimum_from_amount"))
+        if route and route.get("supported") and route_minimum is not None:
+            convert_route_status = "above_minimum" if sellable_quantity >= route_minimum else "below_minimum"
+        elif route and not route.get("supported"):
+            convert_route_status = "unsupported"
+        else:
+            convert_route_status = "not_checked"
         provider_net = _decimal((provider or {}).get("net_usdc") or (provider or {}).get("toTargetAssetOffExchange"))
         dust_eligible = (
             bool(provider)
@@ -84,6 +97,9 @@ async def build_portfolio(include_dust: bool = True, balances: dict | None = Non
                 "dust_eligible": dust_eligible,
                 "recoverable_usdc": _text(provider_net) if dust_eligible else None,
                 "eligibility_source": dust.get("source") if provider else None,
+                "ordinary_convert_route_status": convert_route_status,
+                "ordinary_convert_minimum": _text(route_minimum),
+                "ordinary_convert_evidence_only": bool(route),
                 "unavailable_reason": (
                     "protected" if policy.get("protected") else
                     "minimum_keep" if minimum_keep > 0 else

@@ -39,7 +39,7 @@ from .services.portfolio import build_portfolio
 from .plans import approve_plan, create_funding_plan, execute_plan, get_plan, list_plans
 from .receipts import list_receipts, receipts_csv
 from . import mcp_client
-from .providers.agent_os import client_metadata_document, connection as agent_os_connection
+from .providers.agent_host import agent_host_status
 from .store import PAPER_DEFAULT, get_addressbook, get_config, is_agent_os_readonly, is_mock, load, log_activity, provider_mode, save
 
 app = FastAPI(title="Cassa — Idle Cash That Pays Its Team", version="0.3.0")
@@ -74,21 +74,26 @@ def health() -> dict:
 
 @app.get("/api/providers/binance-agent-os/client-metadata.json")
 def binance_agent_os_client_metadata() -> dict:
-    """Public OAuth client metadata; contains no token or account identifier."""
-    return client_metadata_document()
+    raise HTTPException(
+        status_code=410,
+        detail="Standalone Binance OAuth is partner-only. Connect Agent OS in a supported host such as Codex.",
+    )
 
 
 @app.get("/api/providers/binance-agent-os/status")
-async def binance_agent_os_status() -> dict:
-    return await agent_os_connection.status()
+def binance_agent_os_status() -> dict:
+    return agent_host_status()
 
 
 @app.post("/api/providers/binance-agent-os/connect")
 async def connect_binance_agent_os() -> dict:
-    result = await agent_os_connection.begin_connect()
-    if result.get("state") == "error" and not result.get("authorization_url"):
-        raise HTTPException(status_code=502, detail=result.get("error") or "Binance authorization failed")
-    return result
+    raise HTTPException(
+        status_code=409,
+        detail=(
+            "Binance rejected standalone Cassa OAuth because client registration is partner-only. "
+            "Authenticate binance-agent-os in Codex, then ask Codex to sync the read-only Agentic snapshot to Cassa."
+        ),
+    )
 
 
 @app.get("/api/providers/binance-agent-os/callback", response_class=HTMLResponse)
@@ -98,20 +103,9 @@ async def binance_agent_os_callback(
     iss: str | None = None,
     error: str | None = None,
 ) -> HTMLResponse:
-    if error:
-        raise HTTPException(status_code=400, detail="Binance authorization was declined")
-    if not code:
-        raise HTTPException(status_code=400, detail="Binance did not return an authorization code")
-    try:
-        await agent_os_connection.complete_callback(code, state, iss)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return HTMLResponse(
-        """<!doctype html><html><head><title>Cassa connected</title></head>
-        <body style="background:#0b0b09;color:#f1eddd;font-family:system-ui;padding:3rem">
-        <h1>Binance authorization received.</h1><p>Cassa is verifying the read-only account connection.</p>
-        <script>if(window.opener){window.opener.postMessage('cassa-binance-connected','*');window.close()}</script>
-        </body></html>"""
+    raise HTTPException(
+        status_code=410,
+        detail="This standalone OAuth callback is disabled. Binance authentication stays in the supported agent host.",
     )
 
 
@@ -161,9 +155,9 @@ async def capabilities() -> dict:
     mode = provider_mode()
     live = mode != "paper"
     keys = mcp_client.keys_configured()
-    agent_status = await agent_os_connection.status() if is_agent_os_readonly() else None
+    agent_status = agent_host_status() if is_agent_os_readonly() else None
     if is_agent_os_readonly():
-        balance_status = "available" if agent_status and agent_status.get("authorized") else "authorization_required"
+        balance_status = "supported_host_snapshot" if agent_status and agent_status.get("snapshot_available") else "agent_sync_required"
         dust_status = "tool_unverified"
         earn_status = "not_enabled"
     else:
@@ -175,7 +169,11 @@ async def capabilities() -> dict:
         "account_scope": "agentic-sub-account" if is_agent_os_readonly() else "paper" if not live else "exchange-account",
         "capabilities": {
             "market_data": {"status": "available", "source": "binance-public"},
-            "balances": {"status": balance_status, "source": "binance-agent-os-mcp" if is_agent_os_readonly() else None},
+            "balances": {"status": balance_status, "source": "binance-agent-os-mcp-via-codex" if is_agent_os_readonly() else None},
+            "ordinary_convert_routes": {
+                "status": "evidence_only" if is_agent_os_readonly() else "not_requested",
+                "reason": "pair and minimum observations are not quotes or executions",
+            },
             "dust_discovery": {"status": dust_status, "target": "USDC"},
             "dust_execution": {
                 "status": "paper_only" if not live else "not_enabled",

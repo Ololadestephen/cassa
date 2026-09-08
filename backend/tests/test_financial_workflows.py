@@ -3,7 +3,6 @@ import os
 import tempfile
 import unittest
 from decimal import Decimal
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
@@ -14,8 +13,7 @@ from backend.obligations import create_obligation, get_obligation, list_obligati
 from backend.services.affordability import assess_affordability
 from backend.services.portfolio import build_portfolio
 from backend.store import DEFAULT_ADDRESSBOOK, DEFAULT_CONFIG, get_paper, load, log_activity, save
-from backend.providers.agent_os import AgentOSConnection, FileTokenStorage
-from mcp.shared.auth import OAuthToken
+from backend.providers.agent_host import agent_host_status, record_agentic_snapshot
 
 
 class IsolatedDatabaseTest(unittest.TestCase):
@@ -50,51 +48,45 @@ class IsolatedDatabaseTest(unittest.TestCase):
 
 
 class AgentOSProviderTests(IsolatedDatabaseTest):
-    def test_token_storage_is_private_and_round_trips(self):
-        path = os.path.join(self.temp.name, "oauth.json")
-        storage = FileTokenStorage(path=Path(path))
-        asyncio.run(storage.set_tokens(OAuthToken(access_token="test-token", expires_in=3600)))
-        restored = asyncio.run(storage.get_tokens())
-        self.assertEqual(restored.access_token, "test-token")
-        self.assertEqual(os.stat(path).st_mode & 0o777, 0o600)
-
-    def test_spot_balance_parser_preserves_free_and_locked_amounts(self):
-        connection = AgentOSConnection()
-        payload = {
-            "canTrade": True,
-            "accountType": "SPOT",
-            "balances": [
-                {"asset": "USDT", "free": "6.00000000", "locked": "0.00000000"},
-                {"asset": "TIA", "free": "0.18000000", "locked": "0.00667147"},
-                {"asset": "ZERO", "free": "0", "locked": "0"},
-            ],
-        }
-        with patch.object(connection, "_call_meta", AsyncMock(return_value=payload)):
-            result = asyncio.run(connection.spot_balances())
-        self.assertEqual(result["account_scope"], "agentic-sub-account")
-        self.assertEqual(result["free"]["TIA"], "0.18000000")
-        self.assertEqual(result["locked"]["TIA"], "0.00667147")
-        self.assertEqual(result["balances"]["TIA"], "0.18667147")
-        self.assertNotIn("ZERO", result["balances"])
-
     def test_agent_os_mode_reads_mcp_balance_without_rest_keys(self):
         os.environ["CASSA_PROVIDER"] = "agent-os-readonly"
-        live = {
-            "source": "binance-agent-os-mcp",
-            "account_scope": "agentic-sub-account",
-            "balances": {"USDT": "6.0", "TWT": "0.057"},
-            "free": {"USDT": "6.0", "TWT": "0.057"},
-            "locked": {"USDT": "0", "TWT": "0"},
-        }
-        with patch.object(mcp_client.agent_os_connection, "spot_balances", AsyncMock(return_value=live)), patch.object(
-            mcp_client.agent_os_connection, "status", AsyncMock(return_value={"authorized": True})
-        ), patch.object(mcp_client, "get_prices", AsyncMock(return_value={"source": "test", "TWTUSDC": {"price": "0.57"}})), patch.object(
+        record_agentic_snapshot(
+            balances=[
+                {"asset": "USDT", "free": "6.0", "locked": "0"},
+                {"asset": "TWT", "free": "0.057", "locked": "0"},
+            ],
+            convert_routes=[
+                {"from_asset": "TWT", "to_asset": "USDC", "supported": True, "minimum_from_amount": "0.018"}
+            ],
+        )
+        with patch.object(mcp_client, "get_prices", AsyncMock(return_value={"source": "test", "TWTUSDC": {"price": "0.57"}})), patch.object(
             mcp_client, "get_exchange_balances", AsyncMock()
         ) as rest:
             result = asyncio.run(mcp_client.get_balances())
         rest.assert_not_awaited()
         self.assertEqual(result["mode"], "agent-os-readonly")
         self.assertEqual(result["exchange"]["balances"]["USDT"], "6.0")
+        self.assertEqual(result["convert_routes"][0]["minimum_from_amount"], "0.018")
+        self.assertFalse(result["connection"]["app_has_credentials"])
+
+    def test_agent_host_snapshot_rejects_negative_and_duplicate_balances(self):
+        with self.assertRaisesRegex(ValueError, "non-negative"):
+            record_agentic_snapshot([{"asset": "USDC", "free": "-1", "locked": "0"}])
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            record_agentic_snapshot(
+                [
+                    {"asset": "USDC", "free": "1", "locked": "0"},
+                    {"asset": "usdc", "free": "2", "locked": "0"},
+                ]
+            )
+
+    def test_agent_host_status_does_not_claim_app_authorization(self):
+        record_agentic_snapshot([{"asset": "USDC", "free": "18", "locked": "0"}])
+        status = agent_host_status()
+        self.assertTrue(status["snapshot_available"])
+        self.assertEqual(status["authorization_owner"], "supported-agent-host")
+        self.assertFalse(status["app_has_credentials"])
+        self.assertFalse(status["writes_enabled"])
 
     def test_agent_os_mode_rejects_every_write_adapter(self):
         os.environ["CASSA_PROVIDER"] = "agent-os-readonly"

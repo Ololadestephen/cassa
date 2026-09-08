@@ -18,7 +18,7 @@ import urllib.parse
 
 import httpx
 
-from .providers.agent_os import AgentOSAuthorizationRequired, connection as agent_os_connection
+from .providers.agent_host import agent_host_status, get_agentic_snapshot
 from .store import get_earn_ledger, get_paper, is_agent_os_readonly, is_binance_rest, is_mock, provider_mode, save
 
 PUBLIC_BASES = [
@@ -111,6 +111,16 @@ async def get_prices(symbols: tuple = ("BTCUSDC", "ETHUSDC", "SOLUSDC", "BNBUSDC
     except Exception:
         for symbol in symbols:
             try:
+                if symbol == "USDTUSDC":
+                    from decimal import Decimal
+
+                    inverse_tick, base = await _public_get("/api/v3/ticker/price", {"symbol": "USDCUSDT"})
+                    inverse = Decimal(str(inverse_tick["price"]))
+                    if inverse <= 0:
+                        raise RuntimeError("USDCUSDT returned a non-positive price")
+                    out[symbol] = {"price": str(Decimal("1") / inverse), "route": "inverse USDC/USDT"}
+                    out["base"] = base
+                    continue
                 tick, base = await _public_get("/api/v3/ticker/price", {"symbol": symbol})
                 out[symbol] = {"price": tick["price"]}
                 out["base"] = base
@@ -124,8 +134,8 @@ async def get_prices(symbols: tuple = ("BTCUSDC", "ETHUSDC", "SOLUSDC", "BNBUSDC
                     asset = symbol[:-4]
                     try:
                         asset_tick, base = await _public_get("/api/v3/ticker/24hr", {"symbol": f"{asset}USDT"})
-                        stable_tick, _ = await _public_get("/api/v3/ticker/price", {"symbol": "USDTUSDC"})
-                        usdt_usdc = Decimal(str(stable_tick["price"]))
+                        stable_tick, _ = await _public_get("/api/v3/ticker/price", {"symbol": "USDCUSDT"})
+                        usdt_usdc = Decimal("1") / Decimal(str(stable_tick["price"]))
                         out[symbol] = {
                             "price": str(Decimal(str(asset_tick["lastPrice"])) * usdt_usdc),
                             "change_24h_pct": asset_tick.get("priceChangePercent"),
@@ -325,41 +335,31 @@ async def get_balances() -> dict:
         prices = await get_prices()
         return {"mode": "paper", "source": "paper", "paper": get_paper(), "prices": prices}
     if is_agent_os_readonly():
-        try:
-            exchange = await agent_os_connection.spot_balances()
+        exchange = get_agentic_snapshot()
+        if exchange:
             assets = tuple(f"{asset}USDC" for asset in exchange.get("balances", {}) if asset != "USDC")
             prices = await get_prices(assets or ("BTCUSDC",))
             return {
                 "mode": "agent-os-readonly",
-                "source": "binance-agent-os-mcp",
+                "source": exchange.get("source", "binance-agent-os-mcp-via-codex"),
                 "account_scope": "agentic-sub-account",
                 "exchange": exchange,
+                "convert_routes": exchange.get("convert_routes", []),
                 "positions": {"source": "not-requested", "open": [], "count": 0},
                 "prices": prices,
-                "connection": await agent_os_connection.status(),
+                "connection": agent_host_status(),
             }
-        except AgentOSAuthorizationRequired as exc:
-            return {
-                "mode": "agent-os-readonly",
-                "source": "binance-agent-os-mcp",
-                "account_scope": "agentic-sub-account",
-                "exchange": {"balances": {}, "free": {}, "locked": {}},
-                "positions": {"source": "not-requested", "open": [], "count": 0},
-                "prices": {"source": "not-requested", "fetched_at": int(time.time())},
-                "connection": await agent_os_connection.status(),
-                "read_error": str(exc),
-            }
-        except Exception as exc:
-            return {
-                "mode": "agent-os-readonly",
-                "source": "binance-agent-os-mcp",
-                "account_scope": "agentic-sub-account",
-                "exchange": {"balances": {}, "free": {}, "locked": {}},
-                "positions": {"source": "not-requested", "open": [], "count": 0},
-                "prices": {"source": "not-requested", "fetched_at": int(time.time())},
-                "connection": await agent_os_connection.status(),
-                "read_error": f"Agent OS balance read failed: {exc}",
-            }
+        return {
+            "mode": "agent-os-readonly",
+            "source": "binance-agent-os-mcp-via-codex",
+            "account_scope": "agentic-sub-account",
+            "exchange": {"balances": {}, "free": {}, "locked": {}},
+            "convert_routes": [],
+            "positions": {"source": "not-requested", "open": [], "count": 0},
+            "prices": {"source": "not-requested", "fetched_at": int(time.time())},
+            "connection": agent_host_status(),
+            "read_error": "No Agentic snapshot yet. Ask the supported Codex agent to sync balances to Cassa.",
+        }
     if provider_mode() != "binance-rest":
         raise RuntimeError("CASSA_PROVIDER must be paper, agent-os-readonly, or binance-rest")
     prices = await get_prices()
@@ -380,7 +380,7 @@ async def get_spendable_balance(asset: str) -> float:
     if is_mock():
         return float(get_paper().get("spot", {}).get(asset, 0))
     if is_agent_os_readonly():
-        balances = await agent_os_connection.spot_balances()
+        balances = get_agentic_snapshot() or {}
         return float(balances.get("free", {}).get(asset, 0))
     balances = await get_exchange_balances()
     return float(balances.get("free", {}).get(asset, 0))

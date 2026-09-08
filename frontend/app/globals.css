@@ -231,6 +231,11 @@ select.input option {
   color: #ff8f7c !important;
 }
 
+.provider-note {
+  grid-column: 1 / -1;
+  color: var(--desk-signal) !important;
+}
+
 .decision-workspace {
   border-color: rgba(225, 184, 77, 0.48);
   background: #12120f;
