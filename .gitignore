@@ -11,3 +11,13 @@ backend/data/*.db-shm
 backend/data/*.db-wal
 backend/data/*.json
 .DS_Store
+
+# Internal notes — keep local, do not publish
+AGENT.md
+AGENTS.md
+CAPABILITIES.md
+DEMO.md
+NEXT_AGENT.md
+NEXT_PLAN.md
+PLAN.md
+SUBMISSION.md
