@@ -80,6 +80,21 @@ Success: backend `/api/health` identifies paper, Agent OS read-only, and REST bo
 `/api/market` returns four live symbols; `/api/capabilities` describes provider
 boundaries; and the frontend builds with zero type errors.
 
+## Deploy the demo
+
+Deploy the API on Railway from the repository root. The root
+`requirements.txt`, `railpack.json`, and `start.sh` let Railpack detect Python,
+install the backend dependencies, and launch FastAPI. Configure:
+
+- `CASSA_PROVIDER=paper`
+- `CASSA_DB_PATH=/data/cassa.db`, with a Railway volume mounted at `/data`
+
+Deploy the Next.js app on Vercel from the `frontend` root directory. Set
+`NEXT_PUBLIC_API` to the public Railway service URL, without a trailing slash.
+The public demo must remain in paper mode until owner authentication and a
+verified live payment/conversion rail are implemented. Never copy Binance MCP
+credentials or REST secrets into Vercel.
+
 ## Implemented cash-readiness workflow
 
 - `GET /api/portfolio`: dynamic priced holdings, protected assets, obligations,
