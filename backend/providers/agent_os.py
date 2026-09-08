@@ -210,7 +210,7 @@ class AgentOSConnection:
         )
         async with httpx2.AsyncClient(auth=oauth, timeout=30.0) as http_client:
             async with streamable_http_client(MCP_URL, http_client=http_client) as streams:
-                read_stream, write_stream, _ = streams
+                read_stream, write_stream = streams
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     result = await session.call_tool(
@@ -330,4 +330,3 @@ class AgentOSConnection:
 
 
 connection = AgentOSConnection()
-
