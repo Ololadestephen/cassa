@@ -24,8 +24,17 @@ The product story remains:
 - Binance Agent OS OAuth in the supported Codex host.
 - Funded Agentic Spot balance read using `spot.getAccount`.
 - Public Binance market pricing.
-- Read-only ordinary Convert pair/minimum metadata for the observed holdings.
+- Read-only ordinary Convert pair/minimum metadata for the observed holdings
+  via `convert.listAllConvertPairs`.
 - Credential-free sync into the local Cassa decision engine.
+
+### Catalog-discovered, never executed
+
+- Ordinary Spot Convert quote/accept/status: `convert.sendQuoteRequest` (TRADE),
+  `convert.acceptQuote` (TRADE), `convert.orderStatus` (USER_DATA).
+- Direct Spot order tools: `spot.exchangeInfo`, `spot.orderTest`,
+  `spot.newOrder`, `spot.getOrder`. No filter read and no order placed.
+- Internal wallet movement: `wallet.userUniversalTransfer`. Not a recipient rail.
 
 ### Implemented and tested, but paper only
 
@@ -38,11 +47,13 @@ The product story remains:
 
 ### Not live verified
 
-- Spot ordinary Convert quote, acceptance, and status.
-- Small-balance/dust eligibility and conversion to USDC.
+- Any Convert quote or accepted conversion.
+- Small-balance/dust eligibility query with USDC as target (only `wallet.dustlog`
+  history exists in the MCP catalog sample).
 - Direct Spot sell route and filters for the currently held small assets.
 - External recipient settlement.
 - Earn subscription or redemption.
+- Binance OAuth inside this Grok host (handshake requires authorization).
 
 ### Deployment
 

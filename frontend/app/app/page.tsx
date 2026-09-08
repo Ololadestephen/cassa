@@ -99,7 +99,7 @@ export default function Desk() {
     const prompt = provider?.sync_prompt ?? "Sync my Agentic account balances to Cassa. Do not trade, convert, or transfer anything.";
     try {
       await navigator.clipboard.writeText(prompt);
-      setProviderNotice("Sync prompt copied. Run it in the Codex task that has Binance Agent OS connected.");
+      setProviderNotice("Copied. Run it in the Codex task with Binance Agent OS.");
     } catch {
       setProviderNotice(prompt);
     }
@@ -392,13 +392,11 @@ export default function Desk() {
     <main className="desk-shell max-w-7xl mx-auto p-4 md:p-6 space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3 pt-2">
         <div>
-          <p className="eyebrow mb-1.5">Decision ledger / live account control</p>
           <div className="flex items-center gap-2">
             <h1 className="text-3xl md:text-5xl font-normal font-serif tracking-[-0.045em]">What can safely move?</h1>
-          <span className={`text-[10px] px-2 py-1 border ${online ? "border-emerald-700 text-emerald-300" : online === false ? "border-red-800 text-red-300" : "border-zinc-700 text-zinc-400"}`}>
-            {online ? `● live · ${bal?.mode ?? portfolio?.mode ?? ""}` : online === false ? "● backend offline" : "● connecting"}
+          <span className={`text-[10px] px-2 py-1 border status-chip ${online ? "is-safe" : online === false ? "is-signal" : ""}`}>
+            {online ? `● ${health?.mock_mode ? "paper" : health?.writes_enabled ? "live" : "preview"} · ${bal?.mode ?? portfolio?.mode ?? ""}` : online === false ? "● backend offline" : "● connecting"}
           </span>
-          {health && <span className="text-xs text-zinc-500">earn {health.rails?.earn} · x402 {health.rails?.x402}</span>}
           </div>
         </div>
         <div className="flex items-center gap-2 text-sm">
@@ -411,25 +409,24 @@ export default function Desk() {
       </header>
 
       {online === false && (
-        <div className="card">Backend not reachable. Run: <code className="text-xs">cd /Users/apple/Documents/cassa && MOCK_MODE=true .venv/bin/python -m uvicorn backend.main:app --port 8000</code></div>
+        <div className="card">Backend offline. Start it on port 8000.</div>
       )}
 
       <section className={`provider-strip ${provider?.snapshot_available ? "is-connected" : ""}`}>
         <div>
-          <p className="eyebrow">Account boundary / Binance Agent OS</p>
-          <strong>{provider?.snapshot_available ? "Agentic snapshot synced" : "Sync through the supported Codex agent"}</strong>
+          <strong>{provider?.snapshot_available ? "Agentic snapshot synced" : "Paper ledger"}</strong>
         </div>
         <p>
           {provider?.snapshot_available
-            ? `Codex authenticated with Agent OS · ${provider.account_scope} · read-only · synced ${timeAgo(provider.last_success_at)}`
-            : "Binance authentication stays in Codex. Cassa receives only validated balance observations and stores no OAuth token or API key."}
+            ? `Read-only · ${provider.account_scope} · synced ${timeAgo(provider.last_success_at)}`
+            : "This demo uses the local paper ledger. Confirm every write. Live Agent OS auth stays in Codex."}
         </p>
         <div className="provider-actions">
           {!provider?.snapshot_available && <button className="btn" disabled={busy} onClick={copySyncPrompt}>Copy sync prompt</button>}
-          {provider?.snapshot_available && health?.provider_mode !== "agent-os-readonly" && <span>Select <code>CASSA_PROVIDER=agent-os-readonly</code> and restart to load this snapshot.</span>}
+          {provider?.snapshot_available && health?.provider_mode !== "agent-os-readonly" && <span>Restart with <code>CASSA_PROVIDER=agent-os-readonly</code> to load this snapshot.</span>}
           {provider?.snapshot_available && health?.provider_mode === "agent-os-readonly" && (
-            <span className={provider?.stale ? "text-amber-300" : "provider-proof"}>
-              {provider?.stale ? "● stale snapshot · sync again in Codex" : "● supported-host read · writes locked"}
+            <span className={provider?.stale ? "muted" : "provider-proof"}>
+              {provider?.stale ? "● stale · sync again" : "● writes locked"}
             </span>
           )}
         </div>
@@ -438,19 +435,19 @@ export default function Desk() {
 
       <div className="ticker-tape border-y hairline overflow-hidden">
         <div className="flex items-center">
-          <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-400 px-3 py-2 border-r hairline shrink-0">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live
+          <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] px-3 py-2 border-r hairline shrink-0">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--ink)]" /> Prices
           </span>
           <div className="overflow-hidden flex-1">
             {markets.length === 0 ? (
-              <p className="text-xs text-zinc-500 px-4 py-2">Connecting to the live feed…</p>
+              <p className="text-xs muted px-4 py-2">Connecting to public prices…</p>
             ) : (
               <div className="ticker-track flex w-max whitespace-nowrap">
                 {[...markets, ...markets].map((m, i) => (
                   <span key={i} className="text-xs font-mono px-5 py-2">
-                    <span className="text-zinc-400">{m.asset}</span>{" "}
-                    <span className="font-bold text-zinc-100">${fmt(m.price)}</span>{" "}
-                    <span className={m.change_24h_pct >= 0 ? "text-green-400" : "text-red-400"}>
+                    <span className="muted">{m.asset}</span>{" "}
+                    <span className="font-bold">${fmt(m.price)}</span>{" "}
+                    <span className="muted">
                       {m.change_24h_pct >= 0 ? "▲" : "▼"}{fmt(m.change_24h_pct)}%
                     </span>
                   </span>
@@ -466,44 +463,44 @@ export default function Desk() {
           <section className="card">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">Balance · {bal?.mode ?? "…"}</h2>
-              <span className="text-xs text-zinc-500">source: {bal?.source ?? "…"} · {bal?.account_scope ?? "selected ledger"} · valued at live prices</span>
+              <span className="text-xs muted">{bal?.source ?? "…"}</span>
             </div>
             <div className="text-3xl font-extrabold mt-1">${fmt(total)}</div>
-            <div className="mt-3 divide-y divide-zinc-800">
+            <div className="mt-3 divide-y divide-[var(--rule)]">
               {rows.map((r: any) => (
                 <div key={r.asset} className="flex justify-between py-1.5 text-sm">
-                  <span className="font-mono">{r.asset} <span className="text-zinc-500">{r.quantity}</span></span>
+                  <span className="font-mono">{r.asset} <span className="muted">{r.quantity}</span></span>
                   <span className="flex items-center gap-2">
                     <span>{r.value_usdc == null ? "unpriced" : `$${fmt(r.value_usdc)}`}</span>
                     {r.dust_eligible && <span className="asset-badge is-safe">recover ${fmt(r.recoverable_usdc)}</span>}
-                    {r.ordinary_convert_route_status === "above_minimum" && <span className="asset-badge is-route">Convert route · min {r.ordinary_convert_minimum}</span>}
-                    {r.ordinary_convert_route_status === "below_minimum" && <span className="asset-badge is-signal">below Convert min {r.ordinary_convert_minimum}</span>}
+                    {r.ordinary_convert_route_status === "above_minimum" && <span className="asset-badge is-route">min {r.ordinary_convert_minimum}</span>}
+                    {r.ordinary_convert_route_status === "below_minimum" && <span className="asset-badge is-signal">below min {r.ordinary_convert_minimum}</span>}
                     {r.asset !== "USDC" && <button className="ledger-link text-[10px]" disabled={busy} onClick={() => toggleProtection(r.asset, r.protected)}>{r.protected ? "Unprotect" : "Protect"}</button>}
                   </span>
                 </div>
               ))}
-              {rows.length === 0 && <p className="text-sm text-zinc-500">{bal?.read_error ?? "No holdings returned."}</p>}
+              {rows.length === 0 && <p className="text-sm muted">{bal?.read_error ?? "No holdings returned."}</p>}
             </div>
             <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
-              <div className="ledger-stat"><span className="text-zinc-500 block">Free USDC</span><strong>${fmt(portfolio?.free_usdc)}</strong></div>
-              <div className="ledger-stat"><span className="text-zinc-500 block">Reserved</span><strong>${fmt(portfolio?.reserved_usdc)}</strong></div>
-              <div className="ledger-stat"><span className="text-zinc-500 block">Spendable</span><strong>${fmt(portfolio?.spendable_after_reservations_usdc)}</strong></div>
+              <div className="ledger-stat"><span className="muted block">Free USDC</span><strong>${fmt(portfolio?.free_usdc)}</strong></div>
+              <div className="ledger-stat"><span className="muted block">Reserved</span><strong>${fmt(portfolio?.reserved_usdc)}</strong></div>
+              <div className="ledger-stat"><span className="muted block">Spendable</span><strong>${fmt(portfolio?.spendable_after_reservations_usdc)}</strong></div>
             </div>
-            <p className="text-xs text-zinc-500 mt-2">Dust discovery: {portfolio?.dust?.source ?? portfolio?.dust?.reason ?? "…"} · execution {capabilities?.capabilities?.dust_execution?.status ?? "unknown"}</p>
+
             <div className="mt-3 border-t hairline pt-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-semibold">Flexible Earn · USDC</span>
-                <span className="text-zinc-400">{bal?.earn ? `${fmt(bal.earn.principal)} @ ${bal.earn.apr_pct}% APR (${bal.earn.source})` : "…"}</span>
+                <span className="muted">{bal?.earn ? `${fmt(bal.earn.principal)} @ ${bal.earn.apr_pct}% APR (${bal.earn.source})` : "…"}</span>
               </div>
               {bal?.earn?.accrued_total > 0 && (
-                <p className="text-xs text-green-400 mt-1">+${fmt(bal.earn.accrued_total)} accrued in the paper ledger</p>
+                <p className="text-xs muted mt-1">+${fmt(bal.earn.accrued_total)} accrued</p>
               )}
               <div className="flex gap-2 mt-2">
                 <input className="input" value={redeemAmt} onChange={(e) => setRedeemAmt(e.target.value)} inputMode="decimal" placeholder="Amount USDC" />
                 <button className="btn" disabled={busy} onClick={redeemEarn}>{dryRun ? "Preview redeem" : "Redeem"}</button>
               </div>
               {redeemResult && (
-                <p className={`text-sm mt-2 ${redeemResult.ok ? "" : "text-red-400"}`}>
+                <p className={`text-sm mt-2 ${redeemResult.ok ? "" : "error"}`}>
                   {redeemResult.ok ? ` principal left $${fmt(redeemResult.principal_left ?? redeemResult.principal_available ?? 0)}` : `Blocked: ${redeemResult.error}`}
                 </p>
               )}
@@ -513,7 +510,6 @@ export default function Desk() {
           <section className="card decision-workspace">
             <div className="decision-heading">
               <div>
-                <p className="eyebrow mb-1">Primary decision / read only</p>
                 <h2>Can I afford this?</h2>
               </div>
               <p>{verdict}</p>
@@ -536,64 +532,63 @@ export default function Desk() {
               <button className="btn" disabled={busy} onClick={checkAffordability}>Check affordability</button>
               <button className="btn-ghost" disabled={busy} onClick={saveObligation}>Reserve as obligation</button>
             </div>
-            {affordObligationId && <p className="text-xs text-yellow-300 mt-2">Funding obligation #{affordObligationId}; its reservation is excluded once from this calculation.</p>}
-            {affordError && <p className="text-red-400 text-sm mt-2">{affordError}</p>}
+            {affordObligationId && <p className="text-xs muted mt-2">Using obligation #{affordObligationId}.</p>}
+            {affordError && <p className="error text-sm mt-2">{affordError}</p>}
             {affordResult && (
               <div className="decision-verdict mt-4 space-y-3">
                 <div className="verdict-topline">
                   <span className={`verdict-mark ${affordResult.outcome === "affordable_now" ? "is-safe" : affordResult.outcome === "affordable_after_conversions" ? "is-conditional" : "is-blocked"}`}>{String(affordResult.outcome).replaceAll("_", " ")}</span>
-                  <span className="text-xs text-zinc-500">settlement status: {affordResult.payment_status}</span>
+                  <span className="text-xs muted">{String(affordResult.payment_status).replaceAll("_", " ")}</span>
                 </div>
                 <p className="verdict-copy">{verdict}</p>
                 <div className="decision-math">
                   {[['Free', affordResult.free_usdc], ['Promised elsewhere', affordResult.other_obligations_usdc], ['Keep', affordResult.minimum_reserve_usdc], ['Need to recover', affordResult.shortfall_usdc], ['Left after plan', affordResult.projected_headroom_usdc]].map(([label, value]) => <div key={label}><span>{label}</span><strong>${fmt(value)}</strong></div>)}
                 </div>
-                {affordResult.selected_conversions?.length > 0 && <div className="text-sm"><span className="text-zinc-400">Proposed recovery: </span>{affordResult.selected_conversions.map((c: any) => `${c.asset} ${c.quantity} → est. $${fmt(c.net_usdc)} net`).join(" · ")}</div>}
+                {affordResult.selected_conversions?.length > 0 && <div className="text-sm"><span className="muted">Proposed recovery: </span>{affordResult.selected_conversions.map((c: any) => `${c.asset} ${c.quantity} → est. $${fmt(c.net_usdc)} net`).join(" · ")}</div>}
                 {excludedHoldings.length > 0 && (
                   <div className="decision-exclusions">
                     <span>Left untouched</span>
                     {excludedHoldings.map((item: any) => <strong key={item.asset}>{item.asset} <small>{item.reason}</small></strong>)}
                   </div>
                 )}
-                <p className="text-xs text-zinc-500">Estimates are not receipts. Preparing funds and settling with a recipient remain separate actions.</p>
+                <p className="text-xs muted">Estimates are not receipts. Preparing funds and settling with a recipient remain separate actions.</p>
                 {['affordable_now', 'affordable_after_conversions'].includes(affordResult.outcome) && !fundingPlan && (
                   <button className="btn" disabled={busy} onClick={createFundingPlan}>Create reviewable funding plan</button>
                 )}
               </div>
             )}
-            {planError && <p className="text-red-400 text-sm mt-3">Plan: {planError}</p>}
+            {planError && <p className="error text-sm mt-3">Plan: {planError}</p>}
             {fundingPlan && (
               <div className="plan-card mt-4 p-4 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="eyebrow">Immutable plan · v{fundingPlan.version}</p>
-                    <h3 className="font-semibold">{String(fundingPlan.state).replaceAll('_', ' ')}</h3>
+                    <h3 className="font-semibold">v{fundingPlan.version} · {String(fundingPlan.state).replaceAll('_', ' ')}</h3>
                   </div>
-                  <span className="text-xs text-zinc-500">expires {new Date(fundingPlan.expires_at * 1000).toLocaleTimeString()}</span>
+                  <span className="text-xs muted">expires {new Date(fundingPlan.expires_at * 1000).toLocaleTimeString()}</span>
                 </div>
                 {fundingPlan.steps?.length === 0 ? (
-                  <p className="text-sm text-emerald-300">No conversion is needed; existing spendable USDC covers the goal and reserve.</p>
+                  <p className="text-sm muted">No conversion needed. Spendable USDC already covers it.</p>
                 ) : (
                   <div className="space-y-1">
                     {fundingPlan.steps.map((step: any) => (
-                      <div key={step.ordinal} className="flex flex-wrap justify-between gap-2 text-sm border-b border-zinc-800 py-1.5">
-                        <span>{step.ordinal}. Convert the whole eligible {step.input.asset} balance ({step.input.quantity})</span>
-                        <span className="text-zinc-400">est. ${fmt(step.input.net_usdc)} net · {step.state}</span>
+                      <div key={step.ordinal} className="flex flex-wrap justify-between gap-2 text-sm border-b hairline py-1.5">
+                        <span>{step.ordinal}. Convert {step.input.quantity} {step.input.asset}</span>
+                        <span className="muted">est. ${fmt(step.input.net_usdc)} net · {step.state}</span>
                       </div>
                     ))}
                   </div>
                 )}
-                <p className="text-xs text-zinc-500">Approved cost ceiling: {fundingPlan.request.max_conversion_fee_pct}% · proceeds bound: {fundingPlan.request.max_slippage_pct ?? 1}% · settlement remains a separate confirmed action.</p>
+                <p className="text-xs muted">Fee cap {fundingPlan.request.max_conversion_fee_pct}% · proceeds bound {fundingPlan.request.max_slippage_pct ?? 1}%. Payment is a separate step.</p>
                 <div className="flex flex-wrap gap-2">
                   {fundingPlan.state === 'awaiting_approval' && <button className="btn" disabled={busy} onClick={approveFundingPlan}>Approve exact plan</button>}
                   {fundingPlan.state === 'approved' && <button className="btn" disabled={busy || (fundingPlan.steps?.length > 0 && capabilities?.capabilities?.dust_execution?.status !== 'paper_only')} onClick={executeFundingPlan}>{fundingPlan.steps?.length ? 'Execute paper recovery' : 'Mark funds prepared'}</button>}
-                  {fundingPlan.state === 'blocked' && <span className="text-sm text-red-300">This plan cannot be approved. Change the amount, reserve, policy, or eligible assets and reassess.</span>}
+                  {fundingPlan.state === 'blocked' && <span className="text-sm error">Blocked. Change amount, reserve, or assets and check again.</span>}
                 </div>
                 {fundingPlan.result && (
                   <div className="text-sm">
                     <strong>{fundingPlan.result.funding_status === 'funds_prepared' ? 'Funds prepared.' : 'Plan needs attention.'}</strong>{' '}
                     Payment status: {String(fundingPlan.result.settlement_status ?? 'not_executed').replaceAll('_', ' ')}.
-                    {fundingPlan.result.conversion?.receipts?.length > 0 && <span className="text-zinc-400"> {fundingPlan.result.conversion.receipts.length} provider receipts recorded.</span>}
+                    {fundingPlan.result.conversion?.receipts?.length > 0 && <span className="muted"> {fundingPlan.result.conversion.receipts.length} receipts.</span>}
                   </div>
                 )}
               </div>
@@ -602,7 +597,7 @@ export default function Desk() {
               <div className="mt-4 border-t hairline pt-3">
                 <h3 className="text-sm font-semibold">Recent funding plans</h3>
                 {fundingPlans.slice(0, 5).map((plan) => (
-                  <div key={plan.id} className="flex flex-wrap items-center justify-between gap-2 text-xs py-1.5 border-b border-zinc-800">
+                  <div key={plan.id} className="flex flex-wrap items-center justify-between gap-2 text-xs py-1.5 border-b hairline">
                     <span>v{plan.version} · ${fmt(plan.request.amount)} · {String(plan.state).replaceAll('_', ' ')} · {plan.steps.length} conversion{plan.steps.length === 1 ? '' : 's'}</span>
                     <button className="ledger-link" onClick={() => { setFundingPlan(plan); setPlanError(''); }}>Review</button>
                   </div>
@@ -611,13 +606,13 @@ export default function Desk() {
             )}
             <div className="mt-4 border-t hairline pt-3">
               <h3 className="text-sm font-semibold">Reserved obligations ({obligations.filter((o) => ['reserved','ready'].includes(o.status)).length})</h3>
-              {obligations.length === 0 ? <p className="text-xs text-zinc-500 mt-1">No obligations saved.</p> : obligations.slice(0, 5).map((o) => <div key={o.id} className="flex items-center justify-between gap-2 text-xs py-1.5 border-b border-zinc-800"><span>#{o.id} {o.memo || 'Obligation'} · {o.amount} {o.asset} {o.recipient ? `→ @${o.recipient}` : ''} {o.funding_plan_id ? '· plan linked' : ''}</span><span className="flex items-center gap-2"><span className={o.status === 'ready' ? 'text-emerald-300' : 'text-zinc-500'}>{o.status}</span>{['reserved','ready'].includes(o.status) && <button className="ledger-link" onClick={() => useObligation(o)}>Use</button>}</span></div>)}
+              {obligations.length === 0 ? <p className="text-xs muted mt-1">No obligations saved.</p> : obligations.slice(0, 5).map((o) => <div key={o.id} className="flex items-center justify-between gap-2 text-xs py-1.5 border-b hairline"><span>#{o.id} {o.memo || 'Obligation'} · {o.amount} {o.asset} {o.recipient ? `→ @${o.recipient}` : ''} {o.funding_plan_id ? '· plan linked' : ''}</span><span className="flex items-center gap-2"><span className="muted">{o.status}</span>{['reserved','ready'].includes(o.status) && <button className="ledger-link" onClick={() => useObligation(o)}>Use</button>}</span></div>)}
             </div>
           </section>
 
           <section className="card">
             <h2 className="font-semibold">Optional investment allocation</h2>
-            <p className="text-sm text-zinc-400">Separate from payment preparation: buys the selected allocation, then sends only post-trade surplus above the reserve to Flexible Earn. {earnNote}.</p>
+            <p className="text-sm muted">Separate from payment preparation: buys the selected allocation, then sends only post-trade surplus above the reserve to Flexible Earn. {earnNote}.</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
               <label className="text-xs">DCA total $<input className="input mt-1" value={dcaTotal} onChange={(e) => setDcaTotal(e.target.value)} inputMode="decimal" /></label>
               <label className="text-xs">BTC %<input className="input mt-1" value={splitBtc} onChange={(e) => setSplitBtc(e.target.value)} inputMode="decimal" /></label>
@@ -627,18 +622,18 @@ export default function Desk() {
             <div className="flex gap-2 mt-3">
               <button className="btn" disabled={busy} onClick={runSweep}>{dryRun ? "Preview sweep" : "Execute sweep"}</button>
             </div>
-            {sweepError && <p className="text-sm text-red-400 mt-2">Sweep rejected: {sweepError}</p>}
+            {sweepError && <p className="text-sm error mt-2">Sweep rejected: {sweepError}</p>}
             {sweepResult && (
               <div className="mt-3 text-sm space-y-1">
                 {sweepResult.dca_fills?.map((f: any, i: number) => (
-                  <div key={i} className="flex justify-between border-b border-zinc-800 py-1">
-                    <span>BUY {f.asset} <span className="text-zinc-500">{f.symbol} @ ${fmt(f.price)}</span></span>
-                    <span>${fmt(f.quote_usdc, 0)} → {f.est_qty} <span className="text-zinc-500">({f.result?.source})</span></span>
+                  <div key={i} className="flex justify-between border-b hairline py-1">
+                    <span>BUY {f.asset} <span className="muted">{f.symbol} @ ${fmt(f.price)}</span></span>
+                    <span>${fmt(f.quote_usdc, 0)} → {f.est_qty} <span className="muted">({f.result?.source})</span></span>
                   </div>
                 ))}
-                <div className="py-1 text-zinc-300">Earn: {earnNote}</div>
+                <div className="py-1 muted">Earn: {earnNote}</div>
                 {(sweepResult.dust ?? []).map((d: any, i: number) => (
-                  <div key={i} className="flex justify-between text-zinc-400"><span>Dust {d.asset} {d.qty} ({d.action}, report-only)</span><span>~${fmt(d.est_usdc)}</span></div>
+                  <div key={i} className="flex justify-between muted"><span>Dust {d.asset} {d.qty} ({d.action}, report-only)</span><span>~${fmt(d.est_usdc)}</span></div>
                 ))}
               </div>
             )}
@@ -646,7 +641,7 @@ export default function Desk() {
 
           <section className="card">
             <h2 className="font-semibold">Allowlist pay (internal transfer)</h2>
-            <p className="text-sm text-zinc-400">Allowlisted destinations, caps enforced server-side, external sends rejected.</p>
+            <p className="text-sm muted">Allowlisted destinations, caps enforced server-side, external sends rejected.</p>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-3">
               <label className="text-xs">Linked obligation<select className="input mt-1" value={payObligationId ?? ""} onChange={(e) => selectPayObligation(e.target.value)}><option value="">None</option>{obligations.filter((o) => ['reserved','ready'].includes(o.status) && o.recipient).map((o) => <option key={o.id} value={o.id}>#{o.id} · {o.status} · {o.memo || `${o.amount} USDC`}</option>)}</select></label>
               <label className="text-xs">To<select className="input mt-1" value={payTo} onChange={(e) => setPayTo(e.target.value)}>
@@ -658,18 +653,18 @@ export default function Desk() {
             <div className="flex flex-wrap gap-2 mt-3">
               <button className="btn-ghost" disabled={busy} onClick={previewPay}>1 · Preview</button>
               <button className="btn" disabled={busy || !payPreview?.ok} title={confirmBlockedReason} onClick={() => setShowConfirm(true)}>
-                2 · Review &amp; confirm
+                2 · Confirm
               </button>
             </div>
-            {!payPreview?.ok && confirmBlockedReason && <p className="text-xs text-zinc-500 mt-2">{confirmBlockedReason}</p>}
+            {!payPreview?.ok && confirmBlockedReason && <p className="text-xs muted mt-2">{confirmBlockedReason}</p>}
             {payPreview && (
               <div className="mt-2 text-sm">
                 {payPreview.ok
-                  ? <p>→ @{payTo} ({payPreview.to.label}) ${fmt(payPreview.amount, 0)} · rail {payPreview.rail} · confirm needed: {String(payPreview.needs_confirm)} · today ${fmt(payPreview.caps?.spent_today, 0)}/${fmt(payPreview.caps?.daily, 0)}</p>
-                  : <p className="text-red-400">Blocked: {payPreview.error}</p>}
+                  ? <p>→ @{payTo} ${fmt(payPreview.amount, 0)} · {payPreview.rail} · today ${fmt(payPreview.caps?.spent_today, 0)}/${fmt(payPreview.caps?.daily, 0)}</p>
+                  : <p className="error">Blocked: {payPreview.error}</p>}
               </div>
             )}
-            {payError && <p className="text-sm text-red-400 mt-2">{payError}</p>}
+            {payError && <p className="text-sm error mt-2">{payError}</p>}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-3">
               <input className="input" placeholder="id (e.g. carol)" value={newId} onChange={(e) => setNewId(e.target.value)} />
               <input className="input" placeholder="Label (e.g. Carol — Editor)" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
@@ -678,32 +673,32 @@ export default function Desk() {
             <div className="flex gap-2 mt-2">
               <button className="btn-ghost" onClick={addRecipient}>Add recipient</button>
             </div>
-            {bookError && <p className="text-sm text-red-400 mt-2">Add rejected: {bookError}</p>}
+            {bookError && <p className="text-sm error mt-2">Add rejected: {bookError}</p>}
           </section>
 
           <section className="card">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold">Digest</h2>
-              <a href="/activity" className="ledger-link text-xs">Full ledger →</a>
+              <a href="/activity" className="ledger-link text-xs">Ledger →</a>
             </div>
             {digest ? (
               <div className="text-sm space-y-1">
                 <p>{digest.headline}</p>
-                <p className="text-zinc-400">Yield rail: {digest.earn?.reason ?? digest.earn?.feature} · {digest.recent_activity?.length ?? 0} recent records</p>
+                <p className="muted">{digest.recent_activity?.length ?? 0} recent records</p>
               </div>
-            ) : <p className="text-sm text-zinc-500">Loading digest…</p>}
+            ) : <p className="text-sm muted">Loading digest…</p>}
           </section>
 
           <section className="card">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="font-semibold">Activity — latest</h2>
-              <a href="/activity" className="ledger-link text-xs">Full ledger →</a>
+              <h2 className="font-semibold">Activity</h2>
+              <a href="/activity" className="ledger-link text-xs">Ledger →</a>
             </div>
-            {activity.length === 0 ? <p className="text-sm text-zinc-500">Nothing recorded yet.</p> :
+            {activity.length === 0 ? <p className="text-sm muted">Nothing recorded yet.</p> :
               activity.slice(0, 6).map((a: any) => (
-                <div key={a.ledger_entry_id} className="flex justify-between text-sm border-b border-zinc-800 py-1.5">
-                  <span>#{a.ledger_entry_id} {a.type === "pay" ? `Sent $${fmt(a.amount, 0)} ${a.asset} → @${a.to}` : a.summary ?? a.type} {a.ok === false ? <span className="text-red-400">· {a.reason}</span> : null}</span>
-                  <span className="text-zinc-500">{a.recorded_at ? timeAgo(a.recorded_at) : ""} · {a.mode ?? a.rail ?? ""}</span>
+                <div key={a.ledger_entry_id} className="flex justify-between text-sm border-b hairline py-1.5">
+                  <span>#{a.ledger_entry_id} {a.type === "pay" ? `Sent $${fmt(a.amount, 0)} ${a.asset} → @${a.to}` : a.summary ?? a.type} {a.ok === false ? <span className="error">· {a.reason}</span> : null}</span>
+                  <span className="muted">{a.recorded_at ? timeAgo(a.recorded_at) : ""} · {a.mode ?? a.rail ?? ""}</span>
                 </div>
               ))}
           </section>
@@ -744,11 +739,11 @@ export default function Desk() {
                 )}
                 <div className={`max-w-[86%] ${m.role === "you" ? "text-right" : ""}`}>
                   {m.role === "cassa" && m.kind && (
-                    <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-1">{m.kind}{m.via ? ` · ${m.via}` : ""}</div>
+                    <div className="text-[10px] uppercase tracking-[0.18em] muted mb-1">{m.kind}{m.via ? ` · ${m.via}` : ""}</div>
                   )}
                   <div className={`chat-message inline-block px-3 py-2 text-sm whitespace-pre-wrap text-left ${m.role === "you" ? "is-user" : "is-cassa"}`}>{m.text}</div>
                   {m.at && (
-                    <div className="text-[10px] text-zinc-600 mt-1">
+                    <div className="text-[10px] muted mt-1">
                       {new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </div>
                   )}
@@ -760,7 +755,7 @@ export default function Desk() {
                 <img src="/logo-mark.svg" alt="" width="24" height="24" className="h-6 w-6 rounded-lg mt-0.5 shrink-0" />
                 <div className="chat-typing border px-4 py-3.5 flex gap-1.5 items-center" aria-label="Cassa is typing">
                   {[0, 1, 2].map((d) => (
-                    <span key={d} className="typing-dot h-1.5 w-1.5 rounded-full bg-zinc-400" style={{ animationDelay: `${d * 0.18}s` }} />
+                    <span key={d} className="typing-dot h-1.5 w-1.5 rounded-full bg-[var(--muted-ink)]" style={{ animationDelay: `${d * 0.18}s` }} />
                   ))}
                 </div>
               </div>
@@ -770,20 +765,20 @@ export default function Desk() {
             <input className="input" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send(input)} placeholder="balance · sweep · pay @bob 10 USDC" />
             <button className="btn" disabled={busy} onClick={() => send(input)}>Send</button>
           </div>
-          <p className="text-[11px] text-zinc-500 mt-2">Dry-run {dryRun ? "ON" : "OFF"} · caps $500/send</p>
+          <p className="text-[11px] muted mt-2">{dryRun ? "Preview on" : "Preview off"} · $500/send cap</p>
         </div>
       )}
 
       {showConfirm && payPreview?.ok && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-[var(--ink)]/70 flex items-center justify-center p-4 z-50">
           <div className="card max-w-md w-full space-y-3">
             <h3 className="font-bold text-lg">Confirm send</h3>
-            <div className="text-sm divide-y divide-zinc-800">
-              <div className="flex justify-between py-1.5"><span className="text-zinc-400">To</span><span>@{payTo} ({payPreview.to.label})</span></div>
-              <div className="flex justify-between py-1.5"><span className="text-zinc-400">Amount</span><span>${fmt(payPreview.amount, 0)} {payPreview.asset}</span></div>
-              <div className="flex justify-between py-1.5"><span className="text-zinc-400">Memo</span><span>{payPreview.memo || "—"}</span></div>
-              <div className="flex justify-between py-1.5"><span className="text-zinc-400">Rail</span><span>{payPreview.rail}</span></div>
-              <div className="flex justify-between py-1.5"><span className="text-zinc-400">Mode</span><span>{dryRun ? "dry-run (no funds move)" : "LIVE (funds move)"}</span></div>
+            <div className="text-sm divide-y divide-[var(--rule)]">
+              <div className="flex justify-between py-1.5"><span className="muted">To</span><span>@{payTo} ({payPreview.to.label})</span></div>
+              <div className="flex justify-between py-1.5"><span className="muted">Amount</span><span>${fmt(payPreview.amount, 0)} {payPreview.asset}</span></div>
+              <div className="flex justify-between py-1.5"><span className="muted">Memo</span><span>{payPreview.memo || "—"}</span></div>
+              <div className="flex justify-between py-1.5"><span className="muted">Rail</span><span>{payPreview.rail}</span></div>
+              <div className="flex justify-between py-1.5"><span className="muted">Mode</span><span>{dryRun ? "preview" : "live"}</span></div>
             </div>
             <div className="flex gap-2">
               <button className="btn-ghost flex-1" disabled={busy} onClick={() => setShowConfirm(false)}>Cancel</button>

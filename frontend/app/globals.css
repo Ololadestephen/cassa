@@ -7,11 +7,13 @@
   --paper: #f1eddd;
   --paper-deep: #e5dfc9;
   --paper-raised: #faf8ee;
+  --field: #faf8ee;
   --ink: #171713;
   --muted-ink: #625f55;
   --rule: #b8b19c;
-  --signal: #c94832;
-  --safe: #17624e;
+  --mark: #8c4336;
+  --signal: var(--mark);
+  --safe: var(--ink);
 }
 
 html {
@@ -27,7 +29,7 @@ body {
 }
 
 ::selection {
-  background: rgba(201, 72, 50, 0.22);
+  background: rgba(23, 23, 19, 0.16);
   color: var(--ink);
 }
 
@@ -53,11 +55,19 @@ body {
   box-shadow: none;
 }
 
+.muted {
+  color: var(--muted-ink);
+}
+
+.error {
+  color: var(--mark);
+}
+
 .btn {
   @apply inline-flex items-center justify-center gap-3 font-bold px-5 disabled:opacity-50 transition duration-150;
   min-height: 44px;
   color: var(--paper);
-  background: var(--safe);
+  background: var(--ink);
   border: 1px solid var(--ink);
   border-radius: 2px;
   box-shadow: 4px 4px 0 var(--ink);
@@ -113,32 +123,32 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--signal);
+  outline: 2px solid var(--ink);
   outline-offset: 3px;
 }
 
 .input {
   @apply px-3 py-2 w-full outline-none transition;
   color: var(--ink);
-  background: #fffdf5;
+  background: var(--field);
   border: 1px solid var(--rule);
   border-radius: 2px;
 }
 .input::placeholder {
-  color: #8b8574;
+  color: var(--muted-ink);
 }
 .input:focus {
-  border-color: var(--safe);
-  box-shadow: 0 0 0 3px rgba(23, 98, 78, 0.12);
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(23, 23, 19, 0.1);
 }
 select.input option {
   color: var(--ink);
-  background: #fffdf5;
+  background: var(--field);
 }
 
 .eyebrow {
   @apply text-[11px] font-bold uppercase;
-  color: var(--signal);
+  color: var(--muted-ink);
   letter-spacing: 0.24em;
 }
 
@@ -228,7 +238,7 @@ select.input option {
 }
 
 .desk-nav a:hover {
-  color: var(--signal);
+  color: var(--ink);
 }
 
 .desk-nav > div {
@@ -236,7 +246,7 @@ select.input option {
 }
 
 .desk-wordmark-mark {
-  color: var(--signal);
+  color: var(--ink);
 }
 
 .desk-nav-note {
@@ -261,19 +271,11 @@ select.input option {
   line-height: 1.35;
 }
 
-.asset-badge.is-safe {
-  color: var(--safe);
-  background: rgba(23, 98, 78, 0.07);
-}
-
-.asset-badge.is-route {
+.asset-badge.is-safe,
+.asset-badge.is-route,
+.asset-badge.is-signal {
   color: var(--ink);
   background: var(--paper-deep);
-}
-
-.asset-badge.is-signal {
-  color: var(--signal);
-  background: rgba(201, 72, 50, 0.07);
 }
 
 .ledger-stat {
@@ -285,7 +287,7 @@ select.input option {
 
 .plan-card {
   background: var(--paper-deep);
-  border: 1px solid var(--safe);
+  border: 1px solid var(--rule);
   border-radius: 2px;
 }
 
@@ -295,19 +297,19 @@ select.input option {
 }
 
 .status-chip.is-safe {
-  color: var(--safe);
-  border-color: var(--safe);
+  color: var(--ink);
+  border-color: var(--ink);
 }
 
 .status-chip.is-signal {
-  color: var(--signal);
-  border-color: var(--signal);
+  color: var(--muted-ink);
+  border-color: var(--rule);
 }
 
 .chat-launcher {
   min-height: 48px;
   color: var(--paper);
-  background: var(--safe);
+  background: var(--ink);
   border: 1px solid var(--ink);
   border-radius: 2px;
   box-shadow: 5px 5px 0 var(--ink);
@@ -326,7 +328,7 @@ select.input option {
 
 .chat-unread {
   color: var(--paper);
-  background: var(--signal);
+  background: var(--ink);
   border-radius: 999px;
 }
 
@@ -355,8 +357,8 @@ select.input option {
 
 .chat-message.is-user {
   color: var(--paper);
-  background: var(--safe);
-  border-color: var(--safe);
+  background: var(--ink);
+  border-color: var(--ink);
 }
 
 .chat-message.is-cassa,
@@ -367,14 +369,14 @@ select.input option {
 }
 
 .ledger-link {
-  color: var(--safe);
+  color: var(--ink);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 
 .ledger-link:hover {
-  color: var(--signal);
+  color: var(--muted-ink);
 }
 
 .desk-frame .text-zinc-100,
@@ -382,13 +384,13 @@ select.input option {
 .desk-frame .text-zinc-200,
 .desk-frame .text-zinc-300,
 .desk-page .text-zinc-200,
-.desk-page .text-zinc-300 { color: #3f3c34; }
+.desk-page .text-zinc-300 { color: var(--ink); }
 .desk-frame .text-zinc-400,
 .desk-frame .text-zinc-500,
 .desk-page .text-zinc-400,
 .desk-page .text-zinc-500 { color: var(--muted-ink); }
 .desk-frame .text-zinc-600,
-.desk-page .text-zinc-600 { color: #817b6b; }
+.desk-page .text-zinc-600 { color: var(--muted-ink); }
 .desk-frame .border-zinc-600,
 .desk-frame .border-zinc-700,
 .desk-frame .border-zinc-800,
@@ -402,34 +404,29 @@ select.input option {
 .desk-frame .text-green-400,
 .desk-page .text-emerald-300,
 .desk-page .text-emerald-400,
-.desk-page .text-green-400 { color: var(--safe); }
+.desk-page .text-green-400 { color: var(--ink); }
 .desk-frame .border-emerald-700,
-.desk-page .border-emerald-700 { border-color: var(--safe); }
+.desk-page .border-emerald-700 { border-color: var(--ink); }
 .desk-frame .border-red-800,
-.desk-page .border-red-800 { border-color: var(--signal); }
+.desk-page .border-red-800 { border-color: var(--mark); }
 .desk-frame .bg-emerald-400,
-.desk-page .bg-emerald-400 { background: var(--safe); }
+.desk-page .bg-emerald-400 { background: var(--ink); }
 .desk-frame .text-yellow-300,
 .desk-frame .text-yellow-400,
 .desk-frame .text-amber-300,
 .desk-page .text-yellow-300,
 .desk-page .text-yellow-400,
-.desk-page .text-amber-300 { color: var(--signal); }
+.desk-page .text-amber-300 { color: var(--muted-ink); }
 .desk-frame .text-red-300,
 .desk-frame .text-red-400,
 .desk-page .text-red-300,
-.desk-page .text-red-400 { color: var(--signal); }
+.desk-page .text-red-400 { color: var(--mark); }
 
 .desk-page-header {
   display: grid;
-  grid-template-columns: 0.42fr 1fr;
-  gap: 8px 36px;
+  gap: 10px;
   padding-bottom: 22px;
   border-bottom: 1px solid var(--desk-rule);
-}
-
-.desk-page-header .eyebrow {
-  grid-row: 1 / span 2;
 }
 
 .desk-page-header h1 {
@@ -454,12 +451,12 @@ select.input option {
   gap: 20px;
   padding: 15px 17px;
   border: 1px solid var(--desk-rule);
-  border-left: 4px solid var(--desk-signal);
+  border-left: 4px solid var(--desk-ink);
   background: var(--desk-raised);
 }
 
 .provider-strip.is-connected {
-  border-left-color: var(--desk-safe);
+  border-left-color: var(--desk-ink);
 }
 
 .provider-strip strong {
@@ -489,7 +486,7 @@ select.input option {
 }
 
 .provider-proof {
-  color: var(--desk-safe);
+  color: var(--desk-ink);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -497,12 +494,12 @@ select.input option {
 
 .provider-error {
   grid-column: 1 / -1;
-  color: var(--desk-signal) !important;
+  color: var(--mark) !important;
 }
 
 .provider-note {
   grid-column: 1 / -1;
-  color: var(--desk-signal) !important;
+  color: var(--muted-ink) !important;
 }
 
 .decision-workspace {
@@ -548,7 +545,7 @@ select.input option {
   gap: 8px;
   padding: 11px 12px;
   border-right: 1px solid var(--desk-rule);
-  color: #625f55;
+  color: var(--desk-muted);
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
@@ -560,14 +557,14 @@ select.input option {
 }
 
 .decision-rail li span {
-  color: #575449;
+  color: var(--desk-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 8px;
 }
 
 .decision-rail li.is-active {
   color: var(--desk-paper);
-  background: var(--desk-safe);
+  background: var(--desk-ink);
 }
 
 .decision-rail li.is-active span {
@@ -585,7 +582,7 @@ select.input option {
 .decision-request {
   padding: 16px;
   background: var(--desk-paper-deep);
-  border-left: 3px solid var(--desk-safe);
+  border-left: 3px solid var(--desk-ink);
 }
 
 .decision-request label {
@@ -597,7 +594,7 @@ select.input option {
 .decision-verdict {
   padding: 20px;
   border: 1px solid var(--desk-rule);
-  background: #fffdf5;
+  background: var(--desk-raised);
 }
 
 .verdict-topline {
@@ -618,15 +615,15 @@ select.input option {
 }
 
 .verdict-mark.is-safe {
-  color: var(--desk-safe);
+  color: var(--desk-ink);
 }
 
 .verdict-mark.is-conditional {
-  color: var(--desk-signal);
+  color: var(--desk-ink);
 }
 
 .verdict-mark.is-blocked {
-  color: var(--desk-signal);
+  color: var(--mark);
 }
 
 .verdict-copy {
@@ -655,7 +652,7 @@ select.input option {
 
 .decision-math div:last-child {
   border-right: 0;
-  color: var(--desk-safe);
+  color: var(--desk-ink);
 }
 
 .decision-math span {
@@ -697,7 +694,7 @@ select.input option {
 
 .decision-exclusions small {
   margin-left: 4px;
-  color: #777264;
+  color: var(--desk-muted);
   font-weight: 400;
 }
 
@@ -741,7 +738,7 @@ select.input option {
 }
 
 .book-wordmark span {
-  color: var(--signal);
+  color: var(--ink);
   font-size: 11px;
   margin-left: 7px;
   vertical-align: 2px;
@@ -768,7 +765,7 @@ select.input option {
 .book-nav-links a:not(.book-nav-cta):hover,
 .book-footer a:hover,
 .index-intro a:hover {
-  color: var(--signal);
+  color: var(--muted-ink);
 }
 
 .book-nav-cta {
@@ -808,7 +805,7 @@ select.input option {
 }
 
 .book-kicker {
-  color: var(--signal);
+  color: var(--muted-ink);
   margin-bottom: 40px;
 }
 
@@ -822,7 +819,7 @@ select.input option {
 }
 
 .book-hero h1 em {
-  color: var(--safe);
+  color: var(--ink);
   font-weight: 400;
 }
 
@@ -832,7 +829,7 @@ select.input option {
   padding-left: 120px;
   font-size: clamp(17px, 1.5vw, 22px);
   line-height: 1.45;
-  color: #403e37;
+  color: var(--muted-ink);
 }
 
 .book-actions {
@@ -851,8 +848,8 @@ select.input option {
   min-width: 252px;
   padding: 16px 18px;
   color: var(--paper);
-  background: var(--safe);
-  border: 1px solid var(--safe);
+  background: var(--ink);
+  border: 1px solid var(--ink);
   border-radius: 2px;
   box-shadow: 5px 5px 0 var(--ink);
   font-size: 13px;
@@ -898,7 +895,7 @@ select.input option {
   align-self: center;
   margin: 48px 42px;
   padding: 24px;
-  background: #faf8ee;
+  background: var(--paper-raised);
   border: 1px solid var(--ink);
   box-shadow: 10px 10px 0 var(--paper-deep);
   transform: rotate(0.6deg);
@@ -916,8 +913,8 @@ select.input option {
 }
 
 .sheet-stamp {
-  color: var(--signal);
-  border: 1px solid var(--signal);
+  color: var(--ink);
+  border: 1px solid var(--ink);
   padding: 3px 5px;
   transform: rotate(-3deg);
 }
@@ -957,8 +954,8 @@ select.input option {
 .sheet-result {
   margin: 24px 0;
   padding: 18px;
-  color: #f7f4e8;
-  background: var(--safe);
+  color: var(--paper);
+  background: var(--ink);
 }
 
 .sheet-result span {
@@ -1026,7 +1023,7 @@ select.input option {
 }
 
 .book-manifesto .book-section-label {
-  color: #b4ad98;
+  color: var(--paper-deep);
 }
 
 .book-manifesto blockquote {
@@ -1037,14 +1034,14 @@ select.input option {
 }
 
 .book-manifesto blockquote span {
-  color: var(--signal);
+  color: var(--paper);
 }
 
 .manifesto-copy {
   align-self: end;
   display: grid;
   gap: 24px;
-  color: #c9c2ad;
+  color: var(--paper-deep);
   font-size: 15px;
   line-height: 1.55;
 }
@@ -1094,7 +1091,7 @@ select.input option {
 }
 
 .ledger-number {
-  color: var(--signal);
+  color: var(--muted-ink);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
   font-weight: 700;
@@ -1137,7 +1134,7 @@ select.input option {
   grid-template-columns: 0.55fr 1.45fr;
   gap: 26px;
   padding: 26px 34px;
-  border-bottom: 1px solid #a69f8a;
+  border-bottom: 1px solid var(--rule);
 }
 
 .capability-index > div:last-child {
@@ -1152,14 +1149,14 @@ select.input option {
 .capability-index dt span {
   display: inline-block;
   width: 40px;
-  color: var(--signal);
+  color: var(--muted-ink);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 9px;
   vertical-align: 3px;
 }
 
 .capability-index dd {
-  color: #4c493f;
+  color: var(--muted-ink);
   font-size: 14px;
   line-height: 1.45;
 }
@@ -1193,7 +1190,7 @@ select.input option {
 
 .demo-answer p {
   max-width: 920px;
-  color: var(--safe);
+  color: var(--ink);
   font-size: clamp(24px, 3vw, 42px);
   font-weight: 800;
   line-height: 1.08;
@@ -1207,11 +1204,11 @@ select.input option {
   gap: 40px;
   padding: 80px 42px;
   color: var(--paper);
-  background: var(--signal);
+  background: var(--ink);
 }
 
 .book-close .book-section-label {
-  color: #f3c9be;
+  color: var(--paper-deep);
 }
 
 .book-close h2 {
@@ -1220,17 +1217,17 @@ select.input option {
 
 .book-primary-dark {
   flex: 0 0 auto;
-  color: var(--paper);
-  background: var(--ink);
-  border-color: var(--ink);
-  box-shadow: 5px 5px 0 rgba(241, 237, 221, 0.72);
-}
-
-.book-primary-dark:hover {
   color: var(--ink);
   background: var(--paper);
   border-color: var(--paper);
-  box-shadow: 3px 3px 0 rgba(241, 237, 221, 0.72);
+  box-shadow: 5px 5px 0 rgba(241, 237, 221, 0.45);
+}
+
+.book-primary-dark:hover {
+  color: var(--paper);
+  background: transparent;
+  border-color: var(--paper);
+  box-shadow: 3px 3px 0 rgba(241, 237, 221, 0.45);
 }
 
 .book-footer {
@@ -1406,9 +1403,6 @@ select.input option {
   .desk-page-header,
   .decision-heading {
     grid-template-columns: 1fr;
-  }
-  .desk-page-header .eyebrow {
-    grid-row: auto;
   }
   .decision-rail {
     grid-template-columns: 1fr;

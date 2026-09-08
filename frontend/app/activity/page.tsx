@@ -43,25 +43,24 @@ export default function LedgerPage() {
     }
   }
 
-  if (down) return <><DeskNav /><main className="desk-page max-w-5xl mx-auto p-6"><div className="card">Backend unreachable — evidence unknown until the backend returns.</div></main></>;
+  if (down) return <><DeskNav /><main className="desk-page max-w-5xl mx-auto p-6"><div className="card">Backend offline.</div></main></>;
 
   return (
     <><DeskNav /><main className="desk-page max-w-5xl mx-auto p-4 md:p-6 space-y-4">
       <header className="desk-page-header pt-5">
-        <p className="eyebrow mb-1.5">Evidence book / append only</p>
         <h1>What actually happened.</h1>
         <p>One sequence number per record. Estimates, approvals, executions, and unresolved provider outcomes remain visibly different.</p>
       </header>
       <section className="card">
         {rows.length === 0 ? (
-          <p className="text-sm text-zinc-500">No records yet. Previews that pass and confirmations that run appear here.</p>
+          <p className="text-sm muted">No records yet.</p>
         ) : (
-          <div className="divide-y divide-zinc-800">
+          <div className="divide-y divide-[var(--rule)]">
             {rows.map((r: any) => {
               const result = resultOf(r);
               return (
                 <div key={r.ledger_entry_id} className="py-3 text-sm grid gap-1 md:grid-cols-[90px_1fr_auto] md:items-center">
-                  <span className="font-mono text-zinc-500">#{r.ledger_entry_id}</span>
+                  <span className="font-mono muted">#{r.ledger_entry_id}</span>
                   <div>
                     <div>
                       {r.type === "pay" && <>Sent ${r.amount} {r.asset} → @{r.to}</>}
@@ -69,9 +68,9 @@ export default function LedgerPage() {
                       {r.type === "earn" && <>Earn request</>}
                       {r.type === "x402" && <>x402 request {r.amount} {r.asset}</>}
                       {!["pay", "sweep", "earn", "x402"].includes(r.type) && <>{r.type}</>}
-                      {r.memo ? <span className="text-zinc-500"> · {r.memo}</span> : null}
+                      {r.memo ? <span className="muted"> · {r.memo}</span> : null}
                     </div>
-                    <div className="text-xs text-zinc-500">
+                    <div className="text-xs muted">
                       {r.recorded_at ? new Date(r.recorded_at * 1000).toLocaleString() : ""} ({r.recorded_at ? timeAgo(r.recorded_at) : "—"})
                       {r.day ? ` · day ${r.day}` : ""} · {r.mode ?? r.rail ?? ""}
                       {r.reason ? ` · ${r.reason}` : ""}
@@ -88,17 +87,17 @@ export default function LedgerPage() {
       <section className="card">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
           <div>
-            <h2 className="font-semibold">Provider receipts</h2>
-            <p className="text-xs text-zinc-500">Conversion evidence and completed internal transfers.</p>
+            <h2 className="font-semibold">Receipts</h2>
+            <p className="text-xs muted">Conversions and completed transfers.</p>
           </div>
           <a className="btn-ghost text-xs" href={`${API}/api/receipts/export.csv`}>Export CSV</a>
         </div>
-        {receipts.length === 0 ? <p className="text-sm text-zinc-500">No completed actions have receipts yet.</p> : (
-          <div className="divide-y divide-zinc-800">
+        {receipts.length === 0 ? <p className="text-sm muted">No receipts yet.</p> : (
+          <div className="divide-y divide-[var(--rule)]">
             {receipts.map((receipt) => (
               <div key={receipt.receipt_id} className="py-2 text-sm flex flex-wrap justify-between gap-2">
-                <div><strong>{receipt.kind === 'small_balance_conversion' ? `${receipt.from_asset} → USDC` : `${receipt.from_amount} ${receipt.from_asset} → @${receipt.recipient}`}</strong><p className="text-xs text-zinc-500">provider {receipt.provider_id} · {receipt.recorded_at}</p></div>
-                <div className="text-right">{receipt.net_usdc != null ? `$${Number(receipt.net_usdc).toFixed(2)} net` : receipt.state}<p className="text-xs text-zinc-500">{receipt.fee_usdc != null ? `$${Number(receipt.fee_usdc).toFixed(2)} fee` : 'fee not reported'}</p></div>
+                <div><strong>{receipt.kind === 'small_balance_conversion' ? `${receipt.from_asset} → USDC` : `${receipt.from_amount} ${receipt.from_asset} → @${receipt.recipient}`}</strong><p className="text-xs muted">provider {receipt.provider_id} · {receipt.recorded_at}</p></div>
+                <div className="text-right">{receipt.net_usdc != null ? `$${Number(receipt.net_usdc).toFixed(2)} net` : receipt.state}<p className="text-xs muted">{receipt.fee_usdc != null ? `$${Number(receipt.fee_usdc).toFixed(2)} fee` : ''}</p></div>
               </div>
             ))}
           </div>
@@ -106,15 +105,15 @@ export default function LedgerPage() {
       </section>
       <section className="card">
         <h2 className="font-semibold">Reconciliation</h2>
-        <p className="text-xs text-zinc-500 mb-2">An ambiguous provider response stays locked. Resolve it only after provider history confirms that no action occurred.</p>
-        {actionError && <p className="text-sm text-red-400 mb-2">{actionError}</p>}
-        {reconciliations.length === 0 ? <p className="text-sm text-emerald-300">No unresolved executions.</p> : reconciliations.map((item) => (
-          <div key={item.operation_id} className="py-3 border-t border-zinc-800 space-y-2">
+        <p className="text-xs muted mb-2">Ambiguous results stay locked until provider history confirms failure.</p>
+        {actionError && <p className="text-sm error mb-2">{actionError}</p>}
+        {reconciliations.length === 0 ? <p className="text-sm muted">No unresolved executions.</p> : reconciliations.map((item) => (
+          <div key={item.operation_id} className="py-3 border-t hairline space-y-2">
             <p className="text-sm"><strong>{item.kind}</strong> · {item.operation_id}</p>
-            <p className="text-xs text-zinc-500">{item.result?.error ?? 'Provider result is unresolved.'}</p>
+            <p className="text-xs muted">{item.result?.error ?? 'Provider result is unresolved.'}</p>
             <div className="flex flex-col md:flex-row gap-2">
-              <input className="input" value={evidence[item.operation_id] ?? ''} onChange={(event) => setEvidence((current) => ({ ...current, [item.operation_id]: event.target.value }))} placeholder="Provider history reference confirming failure" />
-              <button className="btn-ghost" onClick={() => resolveFailed(item.operation_id)}>Record confirmed failure</button>
+              <input className="input" value={evidence[item.operation_id] ?? ''} onChange={(event) => setEvidence((current) => ({ ...current, [item.operation_id]: event.target.value }))} placeholder="Provider history reference" />
+              <button className="btn-ghost" onClick={() => resolveFailed(item.operation_id)}>Mark failed</button>
             </div>
           </div>
         ))}

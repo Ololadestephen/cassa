@@ -41,7 +41,13 @@ export default function Landing() {
     })();
   }, []);
 
-  const runtime = down || !health ? "Runtime unavailable" : health.mock_mode ? "Paper execution" : "Live exchange";
+  const runtime = down || !health
+    ? "Runtime unavailable"
+    : health.mock_mode
+      ? "Paper execution"
+      : health.writes_enabled
+        ? "Live exchange"
+        : "Preview only";
   const reserve = config ? `${Number(config.minimum_reserve_usdc).toLocaleString()} USDC` : "Set by owner";
   const recipients = Object.keys(book).length ? `${Object.keys(book).length} allowlisted` : "Owner controlled";
 
@@ -52,7 +58,7 @@ export default function Landing() {
           <a href="/" className="book-wordmark" aria-label="Cassa home">
             CASSA<span>◆</span>
           </a>
-          <p className="book-nav-note">Cash control for Binance agents</p>
+          <span className="book-nav-note" aria-hidden="true" />
           <div className="book-nav-links">
             <a href="/policy">Rules</a>
             <a href="/activity">Evidence</a>
@@ -62,7 +68,6 @@ export default function Landing() {
 
         <header className="book-hero">
           <div className="book-hero-copy">
-            <p className="book-kicker">A cash-readiness agent · Built with Binance Agent OS</p>
             <h1>
               What can safely
               <br />
@@ -103,10 +108,10 @@ export default function Landing() {
         </header>
 
         <section className="proof-strip" aria-label="Current product evidence">
-          <div><span>Connection</span><strong>Agent OS OAuth verified</strong></div>
-          <div><span>Runtime</span><strong>{runtime}</strong></div>
-          <div><span>Reserve rule</span><strong>{reserve}</strong></div>
+          <div><span>Mode</span><strong>{runtime}</strong></div>
+          <div><span>Reserve</span><strong>{reserve}</strong></div>
           <div><span>Recipients</span><strong>{recipients}</strong></div>
+          <div><span>Writes</span><strong>{health?.writes_enabled ? "Enabled" : "Locked"}</strong></div>
         </section>
 
         <section className="book-manifesto">
