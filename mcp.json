@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "binance-agent-os": {
+      "type": "streamable-http",
+      "url": "https://agent.binance.com/mcp/agentic",
+      "note": "Authenticate with the supported client flow. Never commit OAuth credentials. See https://developers.binance.com/en/docs/agent-native/mcp-server/agentic"
+    }
+  }
+}

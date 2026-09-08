@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+frontend/.env.local
+frontend/node_modules/
+frontend/.next/
+frontend/tsconfig.tsbuildinfo
+backend/data/*.db
+backend/data/*.db-shm
+backend/data/*.db-wal
+backend/data/*.json
+.DS_Store

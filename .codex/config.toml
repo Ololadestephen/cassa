@@ -1,0 +1,7 @@
+[mcp_servers.binance-agent-os]
+url = "https://agent.binance.com/mcp/agentic"
+enabled = true
+required = false
+startup_timeout_sec = 20
+tool_timeout_sec = 90
+default_tools_approval_mode = "prompt"
