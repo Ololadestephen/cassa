@@ -352,7 +352,7 @@ export default function Desk() {
     <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3 pt-2">
         <div>
-          <p className="eyebrow mb-1.5">Cassaforte desk</p>
+          <p className="eyebrow mb-1.5">Cassa desk</p>
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-extrabold tracking-tight">Command the vault</h1>
           <span className={`text-xs px-2 py-1 rounded-full ${online ? "bg-green-900 text-green-300" : online === false ? "bg-red-900 text-red-300" : "bg-zinc-800 text-zinc-400"}`}>
@@ -631,7 +631,7 @@ export default function Desk() {
         <button
           onClick={() => { setChatOpen(true); setUnread(0); }}
           className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 bg-yellow-400 text-black font-bold rounded-full pl-2 pr-4 py-2 shadow-[0_12px_36px_-10px_rgba(250,204,21,0.6)] hover:brightness-110 transition"
-          aria-label="Open chat with Cassaforte"
+          aria-label="Open chat with Cassa"
         >
           <img src="/logo-mark.svg" alt="" width="28" height="28" className="h-7 w-7 rounded-full" />
           Chat
@@ -642,8 +642,8 @@ export default function Desk() {
       ) : (
         <div className="card fixed bottom-5 right-5 z-50 w-[min(92vw,384px)] h-[min(68vh,560px)] !p-4 flex flex-col shadow-2xl">
           <div className="flex items-center gap-2 mb-2">
-            <img src="/logo-mark.svg" alt="Cassaforte" width="22" height="22" className="h-[22px] w-[22px] rounded-lg" />
-            <h2 className="font-semibold text-sm">Chat with Cassaforte</h2>
+            <img src="/logo-mark.svg" alt="Cassa" width="22" height="22" className="h-[22px] w-[22px] rounded-lg" />
+            <h2 className="font-semibold text-sm">Chat with Cassa</h2>
             <button onClick={() => setChatOpen(false)} className="ml-auto text-zinc-500 hover:text-white text-xl leading-none px-2" aria-label="Minimize chat">–</button>
           </div>
           <div className="flex flex-wrap gap-1.5 my-2">
@@ -655,7 +655,7 @@ export default function Desk() {
             {msgs.map((m, i) => (
               <div key={i} className={`msg-in flex gap-2 ${m.role === "you" ? "flex-row-reverse" : ""}`}>
                 {m.role === "cassa" ? (
-                  <img src="/logo-mark.svg" alt="Cassaforte" width="24" height="24" className="h-6 w-6 rounded-lg mt-0.5 shrink-0" />
+                  <img src="/logo-mark.svg" alt="Cassa" width="24" height="24" className="h-6 w-6 rounded-lg mt-0.5 shrink-0" />
                 ) : (
                   <span className="h-6 w-6 rounded-lg mt-0.5 shrink-0 bg-white/10 border border-white/15" />
                 )}
@@ -675,7 +675,7 @@ export default function Desk() {
             {busy && (
               <div className="msg-in flex gap-2">
                 <img src="/logo-mark.svg" alt="" width="24" height="24" className="h-6 w-6 rounded-lg mt-0.5 shrink-0" />
-                <div className="bg-zinc-800 border border-white/[0.06] rounded-xl px-4 py-3.5 flex gap-1.5 items-center" aria-label="Cassaforte is typing">
+                <div className="bg-zinc-800 border border-white/[0.06] rounded-xl px-4 py-3.5 flex gap-1.5 items-center" aria-label="Cassa is typing">
                   {[0, 1, 2].map((d) => (
                     <span key={d} className="typing-dot h-1.5 w-1.5 rounded-full bg-zinc-400" style={{ animationDelay: `${d * 0.18}s` }} />
                   ))}

@@ -38,7 +38,7 @@ from .services.portfolio import build_portfolio
 from .plans import approve_plan, create_funding_plan, execute_plan, get_plan, list_plans
 from .receipts import list_receipts, receipts_csv
 from . import mcp_client
-from .store import get_addressbook, get_config, is_mock, load, log_activity, save
+from .store import PAPER_DEFAULT, get_addressbook, get_config, is_mock, load, log_activity, save
 
 app = FastAPI(title="Cassa — Idle Cash That Pays Its Team", version="0.3.0")
 app.add_middleware(
@@ -420,8 +420,11 @@ def paper_reset() -> dict:
     import time as _time
 
     save("paper", {
-        "spot": {"USDC": 1000.0, "BTC": 0.005, "ETH": 0.15, "SOL": 1.0, "DOGE": 5.0, "ADA": 4.0},
-        "earn": {"USDC": {"principal": 250.0, "accrued_total": 0.0, "apr_pct": 4.2, "updated_at": int(_time.time())}},
+        "spot": dict(PAPER_DEFAULT["spot"]),
+        "earn": {
+            asset: {**position, "updated_at": int(_time.time())}
+            for asset, position in PAPER_DEFAULT["earn"].items()
+        },
     })
     save("activity", [])
     save("_seq", {"n": 0})

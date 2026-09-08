@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
-from backend import agent, pay, policy, sweep
+from backend import agent, mcp_client, pay, policy, sweep
 from backend.main import app
 from backend.obligations import create_obligation, get_obligation, list_obligations, set_asset_policy
 from backend.services.affordability import assess_affordability
@@ -41,6 +41,38 @@ class IsolatedDatabaseTest(unittest.TestCase):
 
 
 class StoreAndObligationTests(IsolatedDatabaseTest):
+    def test_paper_reset_restores_reference_demo(self):
+        client = TestClient(app)
+        response = client.post("/api/paper/reset")
+        self.assertEqual(response.status_code, 200, response.text)
+        paper = get_paper()
+        self.assertEqual(Decimal(str(paper["spot"]["USDC"])), Decimal("18"))
+        self.assertEqual(Decimal(str(paper["earn"]["USDC"]["principal"])), Decimal("0"))
+        self.assertGreaterEqual(len([asset for asset in paper["spot"] if asset != "USDC"]), 4)
+
+        prices = {
+            "source": "test",
+            "fetched_at": 1,
+            "BTCUSDC": {"price": "80000"},
+            "DOGEUSDC": {"price": "0.09"},
+            "ADAUSDC": {"price": "0.22"},
+            "XRPUSDC": {"price": "1.40"},
+            "TRXUSDC": {"price": "0.34"},
+        }
+        dust = asyncio.run(mcp_client.get_dust_convertible_assets("USDC", prices=prices))
+        balances = {"mode": "paper", "source": "paper", "paper": paper, "prices": prices}
+        with patch(
+            "backend.services.portfolio.split_holdings",
+            AsyncMock(return_value=(paper["spot"], 0, paper["earn"])),
+        ), patch(
+            "backend.services.portfolio.mcp_client.get_dust_convertible_assets",
+            AsyncMock(return_value=dust),
+        ):
+            portfolio = asyncio.run(build_portfolio(balances=balances))
+        assessment = asyncio.run(assess_affordability("25", minimum_reserve="5", portfolio=portfolio))
+        self.assertEqual(assessment["shortfall_usdc"], "12.00")
+        self.assertEqual(assessment["outcome"], "affordable_after_conversions")
+
     def test_activity_sequence_and_obligation_persist(self):
         first = log_activity({"type": "test", "ok": True})
         second = log_activity({"type": "test", "ok": True})

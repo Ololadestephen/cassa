@@ -47,7 +47,7 @@ export default function LedgerPage() {
   return (
     <main className="max-w-4xl mx-auto p-4 md:p-6 space-y-4">
       <header className="pt-2">
-        <p className="eyebrow mb-1.5">Cassaforte</p>
+        <p className="eyebrow mb-1.5">Cassa</p>
         <h1 className="text-3xl font-extrabold tracking-tight">Ledger</h1>
         <p className="text-sm text-zinc-400">Append-only. One sequence number per record; results are stated exactly as the API returned them.</p>
       </header>

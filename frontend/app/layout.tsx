@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Cassaforte — Know what you can afford",
+  title: "Cassa — Know what you can afford",
   description:
     "Cash readiness for Binance holdings: protect reserves, recover small balances, and prepare payment funds.",
 };

@@ -20,7 +20,9 @@ trade occurred.”
 
 ## Setup
 
-1. Start from the paper reset so the same balances appear on every run.
+1. Intentionally call `POST /api/paper/reset` so the same 18 USDC balance and
+   small holdings appear on every run. This clears paper-only activity; never
+   call it against data you need to preserve.
 2. Keep dry-run on until the explicit paper-execution moment.
 3. Prepare an expense amount, protected asset, and minimum reserve.
 4. Do not describe internal sub-account movement as payment to an arbitrary external teammate.

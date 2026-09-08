@@ -78,8 +78,8 @@ DEFAULT_ADDRESSBOOK = {
 }
 
 PAPER_DEFAULT = {
-    "spot": {"USDC": 1000.0, "BTC": 0.005, "ETH": 0.15, "SOL": 1.0, "DOGE": 5.0, "ADA": 4.0},
-    "earn": {"USDC": {"principal": 250.0, "accrued_total": 0.0, "apr_pct": 4.2, "updated_at": 0}},
+    "spot": {"USDC": 18.0, "BTC": 0.002, "DOGE": 35.0, "ADA": 15.0, "XRP": 3.0, "TRX": 12.0},
+    "earn": {"USDC": {"principal": 0.0, "accrued_total": 0.0, "apr_pct": 4.2, "updated_at": 0}},
 }
 
 PAPER_APR_PCT = 4.2

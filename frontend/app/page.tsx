@@ -82,7 +82,7 @@ export default function Landing() {
       <div className="relative max-w-6xl mx-auto px-5 md:px-8">
         <nav className="flex items-center justify-between py-6">
           <span className="font-extrabold tracking-tight text-lg">
-            Cassaforte<span className="text-yellow-400">.</span>
+            Cassa<span className="text-yellow-400">.</span>
           </span>
           <div className="flex items-center gap-2 text-sm">
             <a href="/policy" className="hidden sm:inline px-3 py-2 text-zinc-400 hover:text-white transition">Policy</a>
@@ -109,7 +109,7 @@ export default function Landing() {
             <a href="/policy" className="btn-ghost !px-6 !py-3.5 text-base">Read the policy</a>
           </div>
           <div className="card !p-3 max-w-3xl mx-auto text-left">
-            <img src="/hero-desk.svg" alt="The Cassaforte cash-readiness desk" className="rounded-xl w-full" width="880" height="520" />
+            <img src="/hero-desk.svg" alt="The Cassa cash-readiness desk" className="rounded-xl w-full" width="880" height="520" />
           </div>
           <p className="-mt-3 text-xs text-zinc-600">The desk — portfolio, affordability, obligations, approvals, and receipts.</p>
           {down && <p className="text-xs text-zinc-500">Backend unreachable — live figures show “status unknown” until it returns.</p>}
@@ -193,7 +193,7 @@ export default function Landing() {
         </section>
 
         <footer className="text-center text-xs text-zinc-600 space-y-2 pb-12 pt-4 border-t border-white/[0.07]">
-          <p>Not financial advice. Cassaforte executes only what policy allows and refuses the rest.</p>
+          <p>Not financial advice. Cassa executes only what policy allows and refuses the rest.</p>
           <p>Unavailable in the US, UK, EEA, Hong Kong, Singapore, and other Binance restricted jurisdictions.</p>
           <p className="pt-1">
             <a href="/app" className="hover:text-zinc-300 transition">Desk</a>

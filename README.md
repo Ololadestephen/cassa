@@ -81,6 +81,8 @@ boundaries; and the frontend builds with zero type errors.
 - `/api/asset-policies/{asset}`: protect a holding or retain a minimum quantity.
 - `GET /api/capabilities`: distinguishes available, paper, unverified, and
   unavailable provider functions.
+- `POST /api/paper/reset`: deliberately clears local paper activity and restores
+  the documented 18 USDC demo scenario. It is unavailable outside paper mode.
 
 Financial state is stored transactionally in SQLite. Existing JSON data is
 imported on first access and retained as a backup.
