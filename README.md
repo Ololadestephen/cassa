@@ -95,6 +95,9 @@ The public demo must remain in paper mode until owner authentication and a
 verified live payment/conversion rail are implemented. Never copy Binance MCP
 credentials or REST secrets into Vercel.
 
+The repository pins Python 3.13.2 for hosts such as Render. Do not use Render's
+Python 3.14 default with the currently pinned Pydantic dependencies.
+
 ## Implemented cash-readiness workflow
 
 - `GET /api/portfolio`: dynamic priced holdings, protected assets, obligations,
