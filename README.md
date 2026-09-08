@@ -113,3 +113,5 @@ sweeps must use their explicit review paths. Parser failures fall back to rules.
 Use `DEMO.md` for the current cash-readiness story. Paper and preview results
 must be labeled as such. Only describe dust conversion, settlement, or Earn as
 live after preserving an authenticated provider receipt for that capability.
+The prepared Track A pitch, X copy, survey answers, and final checklist are in
+`SUBMISSION.md`.
