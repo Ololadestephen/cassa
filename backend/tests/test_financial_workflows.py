@@ -323,6 +323,30 @@ class SweepTests(IsolatedDatabaseTest):
         self.assertTrue(result["ok"])
         self.assertEqual(result["status"], "completed")
 
+    def test_earn_keeps_obligations_in_spot(self):
+        create_obligation("500", "USDC", None, "bob", "Rent")
+        earn = AsyncMock(return_value={"ok": True, "source": "paper"})
+        with patch.object(sweep.mcp_client, "get_balances", AsyncMock(side_effect=[self._balances(1000), self._balances(800)])), patch.object(
+            sweep.mcp_client, "place_spot_order", AsyncMock(return_value={"ok": True, "source": "paper"})
+        ), patch.object(sweep.mcp_client, "earn_subscribe", earn):
+            result = asyncio.run(sweep.run_sweep(dry_run=False))
+        # 800 idle - 50 reserve - 500 reserved for the obligation
+        self.assertEqual(earn.await_args.args[1], 250.0)
+        self.assertEqual(result["reserved_obligations_usdc"], 500.0)
+        self.assertTrue(result["ok"])
+
+    def test_sweep_skips_earn_when_reserve_and_obligations_cover_idle_cash(self):
+        create_obligation("760", "USDC", None, "bob", "Rent")
+        earn = AsyncMock()
+        with patch.object(sweep.mcp_client, "get_balances", AsyncMock(side_effect=[self._balances(1000), self._balances(800)])), patch.object(
+            sweep.mcp_client, "place_spot_order", AsyncMock(return_value={"ok": True, "source": "paper"})
+        ), patch.object(sweep.mcp_client, "earn_subscribe", earn):
+            result = asyncio.run(sweep.run_sweep(dry_run=False))
+        earn.assert_not_awaited()
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["earn"]["swept"], 0.0)
+
     def test_partial_trade_failure_skips_earn_and_reports_partial(self):
         earn = AsyncMock()
         orders = AsyncMock(side_effect=[{"ok": True}, {"ok": False, "error": "failed"}, {"ok": True}])
