@@ -1,4 +1,5 @@
 from . import mcp_client
+from .obligations import reserved_usdc
 from .store import get_config
 
 SYMBOL_MAP = {"BTC": "BTCUSDC", "ETH": "ETHUSDC", "SOL": "SOLUSDC", "BNB": "BNBUSDC"}
@@ -59,14 +60,20 @@ async def run_sweep(
         refreshed = await mcp_client.get_balances()
         post_dca_idle = round(float(_spot_of(refreshed).get("USDC", 0)), 2)
     reserve = float(cfg.get("minimum_reserve_usdc", 50))
-    if dca_ok and post_dca_idle > float(idle_over):
-        swept_amount = round(max(0.0, post_dca_idle - reserve), 2)
+    # Cash held for active USDC obligations stays in spot, as it does for payments.
+    obligations = float(reserved_usdc())
+    swept_amount = round(max(0.0, post_dca_idle - reserve - obligations), 2)
+    if dca_ok and post_dca_idle > float(idle_over) and swept_amount > 0:
         earn_result = await mcp_client.earn_subscribe("USDC", swept_amount, dry_run)
         earn = {**earn_result, "swept": swept_amount if earn_result.get("ok") else 0.0}
     elif not dca_ok:
         earn = {"ok": False, "swept": 0.0, "reason": "skipped_after_dca_failure"}
     else:
-        earn = {"ok": True, "swept": 0.0, "reason": f"idle ${post_dca_idle:.2f} at or below threshold ${float(idle_over):.2f}"}
+        earn = {
+            "ok": True,
+            "swept": 0.0,
+            "reason": f"idle ${post_dca_idle:.2f} at or below threshold ${float(idle_over):.2f}, or held for the reserve and obligations",
+        }
     required_steps_ok = dca_ok and earn.get("ok", False)
 
     dust = []
@@ -97,6 +104,7 @@ async def run_sweep(
         "idle_usdc_before": round(float(spot.get("USDC", 0)), 2),
         "idle_usdc_after_dca": post_dca_idle,
         "minimum_reserve_usdc": reserve,
+        "reserved_obligations_usdc": obligations,
         "dca_fills": fills,
         "earn": earn,
         "dust": dust,
